@@ -56,7 +56,10 @@
       }
     }
     applyAccent();
-    if (state.games.length) renderGameTabs();
+    if (state.games.length) {
+      renderGameTabs();
+      if (!state.gameId) renderHome();
+    }
   }
 
   function currentGame() {
@@ -65,7 +68,10 @@
 
   function applyAccent() {
     const game = currentGame();
-    if (!game) return;
+    if (!game) {
+      document.documentElement.style.removeProperty('--accent');
+      return;
+    }
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     document.documentElement.style.setProperty('--accent', dark ? game.accentDark : game.accent);
   }
@@ -82,7 +88,7 @@
             id: `tab-${game.id}`,
             'aria-selected': String(game.id === state.gameId),
             style: `--tab-accent:${document.documentElement.getAttribute('data-theme') === 'dark' ? game.accentDark : game.accent}`,
-            onclick: () => navigate(game.id, state.section),
+            onclick: () => navigate(game.id, 'current'),
           },
           h('span', { class: 'game-tab__badge', 'aria-hidden': 'true' }, gameIcon(game, 'game-tab__icon')),
           h('span', {}, h('span', { class: 'game-tab__name' }, game.name), h('span', { class: 'game-tab__tagline' }, game.tagline))
@@ -102,7 +108,7 @@
   function parseHash() {
     const [gameId, section] = location.hash.replace(/^#\/?/, '').split('/');
     return {
-      gameId: state.games.some((g) => g.id === gameId) ? gameId : state.games[0].id,
+      gameId: state.games.some((g) => g.id === gameId) ? gameId : null,
       section: SECTIONS.includes(section) ? section : 'current',
     };
   }
@@ -244,6 +250,7 @@
       : null;
 
     modalEls.dialog.style.setProperty('--tag-h', info.hue);
+    modalEls.dialog.style.setProperty('--accent', document.documentElement.getAttribute('data-theme') === 'dark' ? game.accentDark : game.accent);
     modalEls.dialog.setAttribute('aria-busy', 'true');
     modalEls.scroll.replaceChildren(h('div', { class: 'modal__inner' }, media, head, body), footer);
     modalEls.scroll.scrollTop = 0;
@@ -373,7 +380,7 @@
   };
 
   function renderPlay(game) {
-    const options = game.launch || [];
+    const options = game?.launch || [];
     if (!desktop || !desktop.launch || !options.length) {
       els.play.hidden = true;
       els.play.replaceChildren();
@@ -585,6 +592,147 @@
     );
   }
 
+
+  const toolbar = $('.toolbar');
+  const CHANGELOG_RE = /обновл|патч|верси|релиз|снапшот|исправлен|баланс|update|patch|release|snapshot/i;
+  const NOT_CHANGELOG = new Set(['merch', 'special', 'stream', 'competitive', 'battlepass', 'event', 'headhunting', 'weapon']);
+
+  function recentChanges(payload, limit) {
+    const head = payload.data.current.headline;
+    const all = payload.data.current.blocks.flatMap((b) => b.items || []).filter((i) => i.date && i.state !== 'live' && i.state !== 'upcoming' && i.title !== head?.title);
+    const pool = all.filter((i) => !NOT_CHANGELOG.has(i.tag));
+    const preferred = pool.filter((i) => CHANGELOG_RE.test(i.title) || ['update', 'patch', 'release', 'snapshot', 'bedrock'].includes(i.tag));
+    const picked = [...preferred, ...pool.filter((i) => !preferred.includes(i))].slice(0, limit);
+    return picked.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  }
+
+  function homeCardSkeleton(game) {
+    return h('div', { class: 'home-card home-card--loading', 'data-game': game.id }, h('div', { class: 'skeleton skeleton--home' }));
+  }
+
+  function homeCard(game, payload, error) {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const head = h(
+      'header',
+      { class: 'home-card__head' },
+      gameIcon(game, 'home-card__icon'),
+      h('div', { class: 'home-card__titles' }, h('h2', { class: 'home-card__name' }, game.name), h('span', { class: 'home-card__tagline' }, game.tagline)),
+      h('button', { class: 'home-card__open', type: 'button', onclick: () => navigate(game.id, 'current') }, 'Открыть ', h('span', { 'aria-hidden': 'true' }, '→'))
+    );
+    const attrs = { class: 'home-card', 'data-game': game.id, style: `--accent:${dark ? game.accentDark : game.accent}` };
+
+    if (!payload?.data) {
+      return h(
+        'section',
+        attrs,
+        head,
+        h(
+          'div',
+          { class: 'alert alert--error', role: 'alert' },
+          h('div', {}, `Не удалось загрузить данные: ${error || payload?.error || 'источник не отвечает'}`),
+          h('button', { type: 'button', onclick: () => renderHome(true) }, 'Повторить')
+        )
+      );
+    }
+
+    const headline = payload.data.current.headline;
+    const upcoming = payload.data.upcoming.headline;
+    const changes = recentChanges(payload, 4);
+    const openable = headline && (headline.ref || headline.url || headline.summary);
+    const latest = headline
+      ? h(
+          'div',
+          { class: `home-latest${openable ? ' home-latest--link' : ''}`, role: openable ? 'button' : null, tabindex: openable ? '0' : null, onclick: openable ? () => openArticle(headline, game, null) : null, onkeydown: openable ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openArticle(headline, game, null)) : null },
+          h('span', { class: 'home-latest__kicker' }, 'Сейчас'),
+          h('h3', { class: 'home-latest__title' }, headline.title),
+          headline.subtitle && h('p', { class: 'home-latest__subtitle' }, headline.subtitle),
+          headline.summary && h('p', { class: 'home-latest__summary' }, headline.summary),
+          h(
+            'div',
+            { class: 'home-latest__meta' },
+            headline.date && h('span', {}, `Вышло ${F.fmtDate(headline.date, { withYear: true })}`),
+            (headline.chips || []).slice(0, 3).map((c) => h('span', { class: 'home-chip' }, `${c.label}: ${c.value}`))
+          )
+        )
+      : null;
+
+    const list = changes.length
+      ? h(
+          'div',
+          { class: 'home-changes' },
+          h('h4', { class: 'home-changes__title' }, 'Последние изменения'),
+          h(
+            'ul',
+            { class: 'home-changes__list' },
+            changes.map((item) => {
+              const tag = F.tagInfo(item.tag);
+              return h(
+                'li',
+                {},
+                h(
+                  'button',
+                  { class: 'home-change', type: 'button', onclick: () => openArticle(item, game, tag) },
+                  h('time', { class: 'home-change__date', datetime: item.date }, F.fmtDate(item.date)),
+                  h('span', { class: 'home-change__title' }, item.title),
+                  h('span', { class: 'home-change__tag', style: `--tag-h:${tag.hue}` }, tag.label)
+                )
+              );
+            })
+          )
+        )
+      : null;
+
+    const next = upcoming
+      ? h(
+          'button',
+          { class: 'home-next', type: 'button', onclick: () => navigate(game.id, 'upcoming') },
+          h('span', { class: 'home-next__label' }, 'Дальше'),
+          h('span', { class: 'home-next__title' }, upcoming.title),
+          upcoming.date && h('span', { class: 'home-next__date' }, `${upcoming.estimate ? '≈ ' : ''}${F.fmtDate(upcoming.date)}`),
+          h('span', { 'aria-hidden': 'true' }, '→')
+        )
+      : null;
+
+    return h('section', attrs, head, latest, list, next);
+  }
+
+  let homeToken = 0;
+  function renderHome(force) {
+    toolbar.hidden = true;
+    document.title = 'GameHub: главная';
+    renderFooter(null);
+    const token = ++homeToken;
+    const header = h(
+      'div',
+      { class: 'home-head' },
+      h('h1', { class: 'home-head__title' }, 'Главная'),
+      h('p', { class: 'home-head__sub' }, 'Что нового в ваших играх: свежие версии, последние изменения и ближайшие обновления.')
+    );
+    const grid = h('div', { class: 'home-grid' });
+    const slots = new Map();
+    state.games.forEach((game) => {
+      const cached = state.cache.get(game.id);
+      const node = cached?.data && !force ? homeCard(game, cached) : homeCardSkeleton(game);
+      slots.set(game.id, node);
+      grid.append(node);
+    });
+    els.content.replaceChildren(header, grid);
+
+    state.games.forEach((game) => {
+      const cached = state.cache.get(game.id);
+      if (cached?.data && !force) return;
+      fetchGame(game.id, { force: Boolean(force) })
+        .then((payload) => ({ payload }))
+        .catch((err) => ({ error: err.message }))
+        .then(({ payload, error }) => {
+          if (token !== homeToken || state.gameId) return;
+          const next = homeCard(game, payload, error);
+          slots.get(game.id).replaceWith(next);
+          slots.set(game.id, next);
+        });
+    });
+  }
+
   function skeleton() {
     return h('div', {}, h('div', { class: 'skeleton skeleton--hero' }), h('div', { class: 'cards' }, [1, 2, 3].map(() => h('div', { class: 'skeleton skeleton--card' }))));
   }
@@ -649,9 +797,14 @@
     const game = currentGame();
     applyAccent();
     renderGameTabs();
+    if (!game) {
+      renderHome();
+      return;
+    }
+    toolbar.hidden = false;
     renderSectionTabs();
     renderPlay(game);
-    document.title = `${game.name}: ${state.section === 'current' ? 'текущая версия' : 'предстоящее'} · Game Radar`;
+    document.title = `${game.name}: ${state.section === 'current' ? 'текущая версия' : 'предстоящее'} · GameHub`;
 
     const cached = state.cache.get(game.id);
     if (cached?.data) {
@@ -684,6 +837,10 @@
 
   async function reload(force) {
     const game = currentGame();
+    if (!game) {
+      renderHome(true);
+      return;
+    }
     els.refresh.classList.add('is-spinning');
     els.refresh.disabled = true;
     try {

@@ -1,7 +1,7 @@
 {
   "name": "game-tracker",
   "version": "1.0.0",
-  "description": "Game Radar: настольное приложение с текущими и предстоящими событиями в избранных играх",
+  "description": "GameHub: настольное приложение с текущими и предстоящими событиями в избранных играх",
   "private": true,
   "type": "commonjs",
   "main": "electron/main.js",
@@ -22,8 +22,8 @@
   },
   "author": "Nikita",
   "build": {
-    "appId": "local.gameradar.app",
-    "productName": "Game Radar",
+    "appId": "local.gamehub.app",
+    "productName": "GameHub",
     "files": [
       "electron/**",
       "lib/**",
@@ -44,7 +44,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "GameRadar-Setup.exe"
+      "artifactName": "GameHub-Setup.exe"
     },
     "mac": {
       "target": [
@@ -52,7 +52,7 @@
       ],
       "category": "public.app-category.entertainment",
       "icon": "build/icon.png",
-      "artifactName": "GameRadar.${ext}"
+      "artifactName": "GameHub.${ext}"
     },
     "linux": {
       "target": [
@@ -60,11 +60,11 @@
       ],
       "category": "Game",
       "icon": "build/icon.png",
-      "artifactName": "GameRadar.${ext}"
+      "artifactName": "GameHub.${ext}"
     },
     "portable": {
-      "artifactName": "GameRadar-portable.exe"
+      "artifactName": "GameHub-portable.exe"
     }
   },
-  "productName": "Game Radar"
+  "productName": "GameHub"
 }

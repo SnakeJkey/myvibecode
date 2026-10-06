@@ -1,4 +1,4 @@
-name: Сборка Game Radar
+name: Сборка GameHub
 
 on:
   push:
@@ -30,18 +30,18 @@ jobs:
         include:
           - os: windows-latest
             script: dist:win
-            name: GameRadar-Windows
+            name: GameHub-Windows
             files: |
-              dist/GameRadar-portable.exe
-              dist/GameRadar-Setup.exe
+              dist/GameHub-portable.exe
+              dist/GameHub-Setup.exe
           - os: macos-latest
             script: dist:mac
-            name: GameRadar-macOS
-            files: dist/GameRadar.dmg
+            name: GameHub-macOS
+            files: dist/GameHub.dmg
           - os: ubuntu-latest
             script: dist:linux
-            name: GameRadar-Linux
-            files: dist/GameRadar.AppImage
+            name: GameHub-Linux
+            files: dist/GameHub.AppImage
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

@@ -64,7 +64,7 @@ function createWindow() {
     y: saved.y,
     minWidth: 420,
     minHeight: 560,
-    title: 'Game Radar',
+    title: 'GameHub',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     backgroundColor: '#f4f5fb',
     autoHideMenuBar: true,
@@ -115,7 +115,7 @@ ipcMain.handle('games:launch', async (event, target) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   const { response } = await dialog.showMessageBox(win, {
     type: 'question',
-    title: 'Game Radar',
+    title: 'GameHub',
     message: `Не удалось найти: ${result.name}`,
     detail: 'Если программа установлена в необычное место, укажите файл для запуска. Выбор запомнится.',
     buttons: ['Указать файл…', 'Отмена'],

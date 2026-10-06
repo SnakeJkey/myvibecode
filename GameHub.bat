@@ -1,7 +1,7 @@
 @echo off
 setlocal
 chcp 65001 >nul
-title Game Radar
+title GameHub
 cd /d "%~dp0"
 
 if exist "node_modules\electron\dist\electron.exe" goto run
