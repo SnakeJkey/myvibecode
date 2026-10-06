@@ -107,10 +107,24 @@
     else location.hash = hash;
   }
 
+  const desktop = window.gameApi;
+
+  async function listGames() {
+    if (desktop) return desktop.list();
+    const res = await fetch('api/games');
+    return (await res.json()).games;
+  }
+
   async function fetchGame(id, { force = false } = {}) {
-    const res = await fetch(`/api/games/${id}${force ? '?refresh=1' : ''}`);
-    if (!res.ok) throw new Error(`Сервер вернул ${res.status}`);
-    const payload = await res.json();
+    let payload;
+    if (desktop) {
+      payload = await desktop.get(id, force);
+    } else {
+      const res = await fetch(`api/games/${id}${force ? '?refresh=1' : ''}`);
+      if (!res.ok) throw new Error(`Сервер вернул ${res.status}`);
+      payload = await res.json();
+    }
+    if (!payload) throw new Error('Игра не найдена');
     state.cache.set(id, payload);
     return payload;
   }
@@ -374,10 +388,9 @@
     els.refresh.onclick = () => reload(true);
 
     try {
-      const res = await fetch('/api/games');
-      state.games = (await res.json()).games;
+      state.games = await listGames();
     } catch (err) {
-      els.content.replaceChildren(h('div', { class: 'alert alert--error', role: 'alert' }, 'Не удалось связаться с сервером. Запустите приложение командой npm start.'));
+      els.content.replaceChildren(h('div', { class: 'alert alert--error', role: 'alert' }, 'Не удалось получить список игр. Перезапустите приложение.'));
       return;
     }
 

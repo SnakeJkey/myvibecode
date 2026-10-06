@@ -1,15 +1,60 @@
 {
   "name": "game-tracker",
   "version": "1.0.0",
-  "description": "Трекер текущих и предстоящих событий и обновлений в избранных играх",
+  "description": "Game Radar: настольное приложение с текущими и предстоящими событиями в избранных играх",
   "private": true,
   "type": "commonjs",
-  "main": "server.js",
+  "main": "electron/main.js",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "start": "node server.js",
-    "test": "node --test \"test/*.test.js\""
+    "start": "electron .",
+    "web": "node server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "author": "Nikita",
+  "build": {
+    "appId": "local.gameradar.app",
+    "productName": "Game Radar",
+    "files": [
+      "electron/**",
+      "lib/**",
+      "public/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.entertainment"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    }
   }
 }
