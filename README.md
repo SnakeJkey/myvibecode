@@ -61,6 +61,21 @@ npm run dist:linux   # Linux: .AppImage
 
 Иконки игр лежат в `public/icons/`.
 
+## Кнопка «Играть»
+
+Справа от переключателя «Текущая версия / Предстоящая» есть кнопка запуска (только в настольном приложении, в браузерном режиме её нет):
+
+| Игра | Что запускается |
+| --- | --- |
+| Arknights: Endfield | лаунчер GRYPHLINK (`Launcher.exe`) |
+| World of Tanks | сама игра `win64\WorldOfTanks.exe`, без Wargaming Game Center |
+| Minecraft | меню на выбор: Minecraft Launcher, Modrinth App или CurseForge |
+| Hearts of Iron IV | Steam-версия (`steam://rungameid/394360`) |
+
+Программы ищутся автоматически: сначала путь, который вы указали вручную, затем запись об установке в реестре Windows и типичные папки на всех дисках. Если ничего не найдено, приложение предложит указать файл запуска, выбор запоминается (`launchers.json` в папке данных приложения). Если программе нужны права администратора, Windows покажет обычный запрос.
+
+Поиск программ и запуск полноценно рассчитаны на Windows. На macOS и Linux работают Steam, Minecraft Launcher, Modrinth App и CurseForge (если они найдены в стандартных местах), а Endfield и World of Tanks можно запустить, указав файл вручную.
+
 ## Запуск в браузере (запасной вариант)
 
 ```bash
@@ -89,6 +104,7 @@ npm run web      # http://localhost:3000
 - `electron/`: окно настольного приложения и мост между интерфейсом и загрузчиками данных
 - `Game Radar.bat`, `Desktop shortcut.bat`, `Game Radar.command`, `game-radar.sh`: запуск двойным кликом
 - `lib/translate.js`: автоперевод с кэшем и запасным сервисом
+- `lib/launch.js`: поиск и запуск игр и лаунчеров (кнопка «Играть»)
 - `lib/richtext.js`: разбор HTML и BBCode новостей в безопасные блоки для окна новости
 - `server.js`: запасной вариант для браузера, статика и API (`/api/games`, `/api/games/:id`, `/api/games/:id/article?ref=…`, параметр `?refresh=1`)
 - `lib/*.js`: загрузчики и парсеры источников, реестр игр, кэш
