@@ -1527,7 +1527,7 @@ h5.prose__h {
 
 .home-change {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-columns: 4.6em minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   width: 100%;

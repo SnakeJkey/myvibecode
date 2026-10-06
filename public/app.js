@@ -650,7 +650,7 @@
           h(
             'div',
             { class: 'home-latest__meta' },
-            headline.date && h('span', {}, `Вышло ${F.fmtDate(headline.date, { withYear: true })}`),
+            headline.date && !(headline.chips || []).length && h('span', {}, `Вышло ${F.fmtDate(headline.date, { withYear: true })}`),
             (headline.chips || []).slice(0, 3).map((c) => h('span', { class: 'home-chip' }, `${c.label}: ${c.value}`))
           )
         )
