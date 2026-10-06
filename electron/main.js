@@ -4,8 +4,9 @@ const path = require('node:path');
 
 const { GAMES, publicMeta } = require('../lib/games');
 const { createStore } = require('../lib/store');
+const { createTranslator } = require('../lib/translate');
 
-const store = createStore(GAMES);
+let store;
 const stateFile = () => path.join(app.getPath('userData'), 'window-state.json');
 
 function loadWindowState() {
@@ -89,6 +90,8 @@ if (!hasLock) {
   });
 
   app.whenReady().then(() => {
+    const translator = createTranslator({ cacheFile: path.join(app.getPath('userData'), 'translations.json') });
+    store = createStore(GAMES, { localize: translator.localize });
     Menu.setApplicationMenu(null);
     createWindow();
     app.on('activate', () => {

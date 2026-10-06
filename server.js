@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const { GAMES, publicMeta } = require('./lib/games');
 const { createStore } = require('./lib/store');
+const { createTranslator } = require('./lib/translate');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
@@ -45,7 +46,12 @@ function serveStatic(req, res, pathname) {
   });
 }
 
-function createApp({ games = GAMES, store = createStore(games) } = {}) {
+function defaultStore(games) {
+  const translator = createTranslator({ cacheFile: path.join(__dirname, '.cache', 'translations.json') });
+  return createStore(games, { localize: translator.localize });
+}
+
+function createApp({ games = GAMES, store = defaultStore(games) } = {}) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const { pathname } = url;

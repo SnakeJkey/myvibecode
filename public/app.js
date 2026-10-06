@@ -168,7 +168,7 @@
     const body = h(
       'div',
       { class: 'card__body' },
-      h('h3', { class: 'card__title' }, item.title),
+      h('h3', { class: 'card__title', title: item.titleOriginal ? `Оригинал: ${item.titleOriginal}` : null }, item.title),
       item.summary && h('p', { class: 'card__summary' }, item.summary),
       h(
         'div',
@@ -237,7 +237,7 @@
         'div',
         { class: 'hero__body' },
         h('span', { class: 'hero__kicker' }, headline.kicker || game.name),
-        h('h2', { class: 'hero__title' }, headline.title),
+        h('h2', { class: 'hero__title', title: headline.titleOriginal ? `Оригинал: ${headline.titleOriginal}` : null }, headline.title),
         headline.subtitle && h('p', { class: 'hero__subtitle' }, headline.subtitle),
         headline.summary && h('p', { class: 'hero__summary' }, headline.summary),
         countdown(headline),
@@ -302,6 +302,16 @@
         )
       );
     }
+    if (payload.translation && payload.translation.failed !== 0) {
+      nodes.push(
+        h(
+          'div',
+          { class: 'alert', role: 'status' },
+          h('div', {}, h('strong', {}, 'Автоперевод сейчас недоступен. '), 'Часть текстов показана на языке оригинала. Попробуйте обновить данные позже.'),
+          h('button', { type: 'button', onclick: () => reload(true) }, 'Обновить')
+        )
+      );
+    }
     if (section.headline) nodes.push(hero(section.headline, game));
     section.blocks.forEach((b) => nodes.push(block(b)));
     els.content.replaceChildren(...nodes);
@@ -316,6 +326,7 @@
     }
     const sources = payload.data.sources || [];
     els.footer.replaceChildren(
+      payload.translation?.translated > 0 && h('span', {}, 'Тексты на английском переведены автоматически, оригинал виден при наведении на заголовок.'),
       h('span', {}, 'Источники:'),
       ...sources.filter((s) => safeUrl(s.url)).map((s) => h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.name))
     );

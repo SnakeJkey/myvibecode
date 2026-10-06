@@ -68,3 +68,25 @@ test('buildSections: анонс следующей версии определя
 test('buildSections: без записей о версии выбрасывает понятную ошибку', () => {
   assert.throws(() => buildSections([], new Map(), null, Date.now()), /не найдено/);
 });
+
+test('buildSections: русские названия из бюллетеня заменяют английские', () => {
+  const ts2 = (iso) => Math.floor(Date.parse(iso) / 1000);
+  const entries = [
+    { cid: '3', title: '[Beta] Version Update Notes', tab: 'notices', displayTime: ts2('2026-09-01T01:00:00Z'), brief: 'en brief' },
+    { cid: '4', title: '[Banner] Chartered Headhunting', tab: 'notices', displayTime: ts2('2026-09-20T05:00:00Z'), brief: 'en brief' },
+    { cid: '2', title: '[Alpha] Version Update Notes', tab: 'notices', displayTime: ts2('2026-07-15T01:00:00Z'), brief: '' },
+  ];
+  const ru = {
+    titles: new Map([
+      ['3', { title: '「Бета-версия」 Описание обновления', brief: 'Уважаемый Эндминистратор! Новая версия' }],
+      ['4', { title: 'Специальный наем [Баннер]', brief: 'Уважаемый Эндминистратор! ▼// Время наема' }],
+    ]),
+    intro: new Map(),
+  };
+  const result = buildSections(entries, new Map([['4', '<p>Availability Sept. 20, 2026 at 12:00 – Before version update</p>']]), null, Date.parse('2026-09-25T00:00:00Z'), ru);
+  assert.equal(result.current.headline.title, 'Версия «Бета-версия»');
+  const live = result.current.blocks[0].items[0];
+  assert.equal(live.title, 'Специальный наем [Баннер]');
+  assert.equal(live.summary, 'Время наема');
+  assert.match(live.url, /\/ru-ru\/news\/4$/);
+});
