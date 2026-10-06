@@ -203,14 +203,16 @@ button {
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: #fff;
-  background: var(--tab-accent);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tab-accent) 14%, var(--surface-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tab-accent) 35%, transparent);
 }
 
-[data-theme='dark'] .game-tab__badge {
-  color: #10121c;
+.game-tab__icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
 }
 
 .game-tab__name {
@@ -426,6 +428,18 @@ button {
   transition: transform 0.15s, filter 0.2s;
 }
 
+.btn {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.btn--ghost {
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
 .btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.07);
@@ -467,10 +481,11 @@ button {
 }
 
 .hero__glyph {
-  font-size: clamp(4rem, 10vw, 7rem);
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  color: color-mix(in srgb, var(--accent) 55%, transparent);
+  width: clamp(88px, 14vw, 132px);
+  height: clamp(88px, 14vw, 132px);
+  border-radius: 28px;
+  object-fit: cover;
+  box-shadow: var(--shadow-lift);
 }
 
 .countdown {
@@ -588,9 +603,14 @@ button {
 .card__media--empty {
   display: grid;
   place-items: center;
-  font-size: 2.2rem;
-  font-weight: 900;
-  color: hsl(var(--tag-h) 50% 55% / 0.55);
+}
+
+.card__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: var(--shadow);
 }
 
 .card__badges {
@@ -865,5 +885,268 @@ button {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+.card {
+  cursor: pointer;
+}
+
+.card:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 20, 0.62);
+  backdrop-filter: blur(6px);
+  animation: fade 0.2s ease-out;
+}
+
+.modal__dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(920px, 100%);
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  animation: pop 0.22s ease-out;
+}
+
+.modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  cursor: pointer;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.modal__scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal__inner {
+  flex: 1;
+}
+
+.modal__cover {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.modal__head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px clamp(20px, 5vw, 56px) 8px;
+}
+
+.modal__badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.modal__when {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.modal__content {
+  padding: 8px clamp(20px, 5vw, 56px) 28px;
+}
+
+.modal__note {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.modal__note--warn {
+  color: var(--text);
+  background: color-mix(in srgb, var(--warn, #e0a030) 14%, var(--surface));
+}
+
+.modal__footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding: 14px clamp(20px, 5vw, 56px);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.modal__nolink {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.modal__loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.prose {
+  font-size: 1.02rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.prose p {
+  margin: 0.9em 0;
+}
+
+.prose__lead {
+  font-size: 1.12rem;
+  color: var(--muted);
+}
+
+.prose__h {
+  margin: 1.8em 0 0.5em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+h3.prose__h {
+  font-size: 1.45rem;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+h4.prose__h {
+  font-size: 1.2rem;
+}
+
+h5.prose__h {
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+.prose__list {
+  margin: 0.8em 0;
+  padding-left: 1.4em;
+}
+
+.prose__list li {
+  margin: 0.3em 0;
+}
+
+.prose blockquote {
+  margin: 1em 0;
+  padding: 10px 16px;
+  border-left: 4px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--surface-2);
+}
+
+.prose hr {
+  margin: 1.6em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.prose__figure {
+  margin: 1.2em 0;
+}
+
+.prose__figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 0;
+  }
+
+  .modal__dialog {
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal__dialog,
+  .modal__backdrop {
+    animation: none;
   }
 }

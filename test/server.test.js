@@ -93,3 +93,34 @@ test('кэш не вызывает источник повторно в пред
     assert.equal(calls, 2);
   });
 });
+
+test('полный текст новости: перевод блоков, ошибки и отсутствие ссылки', async () => {
+  const games = [
+    {
+      ...makeGame('a', async () => sample('A')),
+      article: async (ref) => {
+        if (ref === 'boom') throw new Error('источник недоступен');
+        return { url: 'https://example.com/news/1', blocks: [{ type: 'h', level: 2, text: 'Hello world' }, { type: 'p', text: 'Привет' }, { type: 'img', src: 'https://example.com/a.png' }] };
+      },
+    },
+    makeGame('b', async () => sample('B')),
+  ];
+  const translateBlocks = async (texts) => texts.map((t) => (t === 'Hello world' ? 'Привет, мир' : t));
+  await withServer(games, { translateBlocks }, async (base) => {
+    const ok = await (await fetch(`${base}/api/games/a/article?ref=1`)).json();
+    assert.equal(ok.ok, true);
+    assert.equal(ok.article.url, 'https://example.com/news/1');
+    assert.equal(ok.article.blocks[0].text, 'Привет, мир');
+    assert.equal(ok.article.blocks[0].original, 'Hello world');
+    assert.equal(ok.article.blocks[2].type, 'img');
+    assert.equal(ok.article.translation.translated, 1);
+
+    const bad = await (await fetch(`${base}/api/games/a/article?ref=boom`)).json();
+    assert.equal(bad.ok, false);
+    assert.match(bad.error, /недоступен/);
+
+    const none = await (await fetch(`${base}/api/games/b/article?ref=1`)).json();
+    assert.equal(none.ok, false);
+    assert.equal((await fetch(`${base}/api/games/zzz/article?ref=1`)).status, 404);
+  });
+});

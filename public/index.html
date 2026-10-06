@@ -56,6 +56,16 @@
     </main>
 
     <footer class="footer" id="footer"></footer>
+
+    <div class="modal" id="modal" hidden>
+      <div class="modal__backdrop"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal__close icon-btn" id="modal-close" type="button" aria-label="Закрыть" title="Закрыть (Esc)">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="modal__scroll"></div>
+      </div>
+    </div>
     <script src="format.js" defer></script>
     <script src="app.js" defer></script>
   </body>
