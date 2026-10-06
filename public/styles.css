@@ -850,6 +850,10 @@ button {
     min-width: 150px;
   }
 
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
   .countdown__cell {
     min-width: 56px;
   }
