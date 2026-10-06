@@ -19,6 +19,8 @@
     updated: $('#updated'),
     refresh: $('#refresh'),
     theme: $('#theme'),
+    play: $('#play'),
+    toast: $('#toast'),
   };
 
   function h(tag, props, ...children) {
@@ -322,6 +324,107 @@
     }
   }
 
+
+  let toastTimer = null;
+  function showToast(message, kind) {
+    els.toast.textContent = message;
+    els.toast.className = `toast${kind ? ` toast--${kind}` : ''}`;
+    els.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      els.toast.hidden = true;
+    }, kind === 'error' ? 7000 : 3500);
+  }
+
+  function closePlayMenu() {
+    const toggle = els.play.querySelector('[aria-expanded="true"]');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    const menu = els.play.querySelector('.play__menu');
+    if (menu) menu.hidden = true;
+  }
+
+  async function launchTarget(option, button) {
+    closePlayMenu();
+    button.disabled = true;
+    showToast(`Запускаем: ${option.label === 'Играть' ? currentGame().name : option.label}…`);
+    try {
+      const result = await desktop.launch(option.target);
+      if (result.ok) showToast(`Запущено: ${option.label === 'Играть' ? currentGame().name : option.label}`, 'ok');
+      else if (result.cancelled) els.toast.hidden = true;
+      else showToast(result.error || 'Не удалось запустить', 'error');
+    } catch (err) {
+      showToast(`Не удалось запустить: ${err.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  const playIcon = () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M7 4.5v15a1 1 0 0 0 1.52.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z');
+    path.setAttribute('fill', 'currentColor');
+    svg.append(path);
+    return svg;
+  };
+
+  function renderPlay(game) {
+    const options = game.launch || [];
+    if (!desktop || !desktop.launch || !options.length) {
+      els.play.hidden = true;
+      els.play.replaceChildren();
+      return;
+    }
+    els.play.hidden = false;
+    if (options.length === 1) {
+      const [option] = options;
+      const button = h('button', { class: 'play__btn', type: 'button', title: option.hint, onclick: () => launchTarget(option, button) }, playIcon(), option.label);
+      els.play.replaceChildren(button);
+      return;
+    }
+    const menu = h(
+      'div',
+      { class: 'play__menu', role: 'menu', hidden: true },
+      options.map((option) => {
+        const item = h(
+          'button',
+          { class: 'play__item', type: 'button', role: 'menuitem', onclick: () => launchTarget(option, item) },
+          h('span', { class: 'play__item-label' }, option.label),
+          h('span', { class: 'play__item-hint' }, option.hint)
+        );
+        return item;
+      })
+    );
+    const toggle = h(
+      'button',
+      {
+        class: 'play__btn',
+        type: 'button',
+        'aria-haspopup': 'menu',
+        'aria-expanded': 'false',
+        title: 'Выберите, чем запустить Minecraft',
+        onclick: (e) => {
+          e.stopPropagation();
+          const open = toggle.getAttribute('aria-expanded') === 'true';
+          closePlayMenu();
+          if (!open) {
+            toggle.setAttribute('aria-expanded', 'true');
+            menu.hidden = false;
+            menu.querySelector('button')?.focus();
+          }
+        },
+      },
+      playIcon(),
+      'Играть',
+      h('span', { class: 'play__caret', 'aria-hidden': 'true' }, '▾')
+    );
+    els.play.replaceChildren(toggle, menu);
+  }
+
   function badge(text, cls) {
     return h('span', { class: `badge ${cls}` }, text);
   }
@@ -547,6 +650,7 @@
     applyAccent();
     renderGameTabs();
     renderSectionTabs();
+    renderPlay(game);
     document.title = `${game.name}: ${state.section === 'current' ? 'текущая версия' : 'предстоящее'} · Game Radar`;
 
     const cached = state.cache.get(game.id);
@@ -609,6 +713,10 @@
     });
     document.addEventListener('keydown', (e) => {
       if (!modalEls.root.hidden) trapFocus(e);
+      else if (e.key === 'Escape') closePlayMenu();
+    });
+    document.addEventListener('click', (e) => {
+      if (!els.play.contains(e.target)) closePlayMenu();
     });
 
     try {

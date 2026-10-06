@@ -1,13 +1,37 @@
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, dialog } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { GAMES, publicMeta } = require('../lib/games');
+const { GAMES, LAUNCH_TARGETS, publicMeta } = require('../lib/games');
+const { createLauncher } = require('../lib/launch');
 const { createStore } = require('../lib/store');
 const { createTranslator } = require('../lib/translate');
 
 let store;
+let launcher;
 const stateFile = () => path.join(app.getPath('userData'), 'window-state.json');
+const launchersFile = () => path.join(app.getPath('userData'), 'launchers.json');
+
+const launcherSettings = {
+  read() {
+    try {
+      return JSON.parse(fs.readFileSync(launchersFile(), 'utf8'));
+    } catch {
+      return {};
+    }
+  },
+  get(target) {
+    const value = this.read()[target];
+    return typeof value === 'string' ? value : null;
+  },
+  set(target, file) {
+    try {
+      fs.writeFileSync(launchersFile(), JSON.stringify({ ...this.read(), [target]: file }, null, 2));
+    } catch {
+      /* путь просто не запомнится */
+    }
+  },
+};
 
 function loadWindowState() {
   try {
@@ -83,6 +107,31 @@ ipcMain.handle('articles:get', async (_event, id, ref) => {
   return (await store.getArticle(id, ref)) || { ok: false, error: 'Игра не найдена' };
 });
 
+ipcMain.handle('games:launch', async (event, target) => {
+  if (typeof target !== 'string' || !LAUNCH_TARGETS.has(target)) return { ok: false, error: 'Неизвестная игра или лаунчер' };
+  const result = await launcher.launch(target);
+  if (result.ok || result.code !== 'not-found') return result;
+
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question',
+    title: 'Game Radar',
+    message: `Не удалось найти: ${result.name}`,
+    detail: 'Если программа установлена в необычное место, укажите файл для запуска. Выбор запомнится.',
+    buttons: ['Указать файл…', 'Отмена'],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response !== 0) return { ok: false, cancelled: true, error: result.error };
+  const picked = await dialog.showOpenDialog(win, {
+    title: `Укажите файл запуска: ${result.name}`,
+    properties: ['openFile'],
+    filters: process.platform === 'win32' ? [{ name: 'Программы', extensions: ['exe', 'lnk', 'bat'] }, { name: 'Все файлы', extensions: ['*'] }] : [],
+  });
+  if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true, error: result.error };
+  return launcher.launchFile(target, picked.filePaths[0]);
+});
+
 const hasLock = app.requestSingleInstanceLock();
 if (!hasLock) {
   app.quit();
@@ -98,6 +147,7 @@ if (!hasLock) {
   app.whenReady().then(() => {
     const translator = createTranslator({ cacheFile: path.join(app.getPath('userData'), 'translations.json') });
     store = createStore(GAMES, { localize: translator.localize, translateBlocks: translator.translateBlocks });
+    launcher = createLauncher({ shell, settings: launcherSettings });
     Menu.setApplicationMenu(null);
     createWindow();
     app.on('activate', () => {
