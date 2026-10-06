@@ -48,7 +48,7 @@ function serveStatic(req, res, pathname) {
 
 function defaultStore(games) {
   const translator = createTranslator({ cacheFile: path.join(__dirname, '.cache', 'translations.json') });
-  return createStore(games, { localize: translator.localize });
+  return createStore(games, { localize: translator.localize, translateBlocks: translator.translateBlocks });
 }
 
 function createApp({ games = GAMES, store = defaultStore(games) } = {}) {
@@ -63,6 +63,13 @@ function createApp({ games = GAMES, store = defaultStore(games) } = {}) {
 
     if (pathname === '/api/health') return sendJson(res, 200, { status: 'ok' });
     if (pathname === '/api/games') return sendJson(res, 200, { games: games.map(publicMeta) });
+
+    const articleMatch = pathname.match(/^\/api\/games\/([a-z0-9_-]+)\/article$/);
+    if (articleMatch) {
+      const result = await store.getArticle(articleMatch[1], url.searchParams.get('ref'));
+      if (!result) return sendJson(res, 404, { error: 'Игра не найдена' });
+      return sendJson(res, 200, result);
+    }
 
     const match = pathname.match(/^\/api\/games\/([a-z0-9_-]+)$/);
     if (match) {

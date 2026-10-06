@@ -78,6 +78,11 @@ ipcMain.handle('games:get', async (_event, id, force) => {
   return store.get(id, { force: force === true });
 });
 
+ipcMain.handle('articles:get', async (_event, id, ref) => {
+  if (typeof id !== 'string' || typeof ref !== 'string') return { ok: false, error: 'Некорректный запрос' };
+  return (await store.getArticle(id, ref)) || { ok: false, error: 'Игра не найдена' };
+});
+
 const hasLock = app.requestSingleInstanceLock();
 if (!hasLock) {
   app.quit();
@@ -92,7 +97,7 @@ if (!hasLock) {
 
   app.whenReady().then(() => {
     const translator = createTranslator({ cacheFile: path.join(app.getPath('userData'), 'translations.json') });
-    store = createStore(GAMES, { localize: translator.localize });
+    store = createStore(GAMES, { localize: translator.localize, translateBlocks: translator.translateBlocks });
     Menu.setApplicationMenu(null);
     createWindow();
     app.on('activate', () => {
