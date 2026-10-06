@@ -124,3 +124,12 @@ test('полный текст новости: перевод блоков, ош�
     assert.equal((await fetch(`${base}/api/games/zzz/article?ref=1`)).status, 404);
   });
 });
+
+test('статика: иконки игр отдаются как PNG', async () => {
+  const games = [makeGame('a', async () => sample('A'))];
+  await withServer(games, {}, async (base) => {
+    const res = await fetch(`${base}/icons/minecraft.png`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'image/png');
+  });
+});
