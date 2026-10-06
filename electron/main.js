@@ -41,6 +41,7 @@ function createWindow() {
     minWidth: 420,
     minHeight: 560,
     title: 'Game Radar',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     backgroundColor: '#f4f5fb',
     autoHideMenuBar: true,
     show: false,

@@ -12,14 +12,13 @@
     "start": "electron .",
     "web": "node server.js",
     "test": "node --test \"test/*.test.js\"",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist": "npx --yes electron-builder@26",
+    "dist:win": "npx --yes electron-builder@26 --win",
+    "dist:mac": "npx --yes electron-builder@26 --mac",
+    "dist:linux": "npx --yes electron-builder@26 --linux"
   },
   "devDependencies": {
-    "electron": "^44.5.1",
-    "electron-builder": "^26.15.3"
+    "electron": "^44.5.1"
   },
   "author": "Nikita",
   "build": {
@@ -29,6 +28,7 @@
       "electron/**",
       "lib/**",
       "public/**",
+      "build/icon.png",
       "package.json"
     ],
     "directories": {
@@ -36,25 +36,35 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
-      ]
+        "portable",
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "GameRadar-Setup.exe"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.entertainment"
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.png",
+      "artifactName": "GameRadar.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Game"
+      "category": "Game",
+      "icon": "build/icon.png",
+      "artifactName": "GameRadar.${ext}"
+    },
+    "portable": {
+      "artifactName": "GameRadar-portable.exe"
     }
-  }
+  },
+  "productName": "Game Radar"
 }
