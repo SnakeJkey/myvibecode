@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildSections, classify, expansionName } = require('../lib/hoi4');
+const { buildSections, classify, expansionName, eventsToEntries, cyrillicShare } = require('../lib/hoi4');
 
 const ts = (iso) => Math.floor(Date.parse(iso) / 1000);
 const post = (gid, title, iso, contents = 'Generals! Текст [b]поста[/b]') => ({ gid, title, date: ts(iso), contents });
@@ -34,9 +34,9 @@ test('buildSections: версия, Dev Corner и беты', () => {
   assert.equal(r.current.blocks[0].items[0].version, '1.19.3');
   assert.equal(r.current.blocks[0].items.length, 2);
 
-  const diaries = r.upcoming.blocks.find((b) => b.title.startsWith('Dev Corner'));
+  const diaries = r.upcoming.blocks.find((b) => b.title.startsWith('Уголок разработчиков'));
   assert.equal(diaries.items.length, 1);
-  assert.match(diaries.items[0].url, /view\/5$/);
+  assert.match(diaries.items[0].url, /view\/5\?l=russian$/);
   assert.equal(diaries.items[0].image, 'https://clan.fastly.steamstatic.com/images/1/pic.png');
   assert.equal(r.upcoming.headline.kicker, 'Дневник разработчиков');
 });
@@ -49,4 +49,50 @@ test('buildSections: распродажи не попадают в новост�
 
 test('buildSections: без патчей ошибка', () => {
   assert.throws(() => buildSections([post('1', 'Новость', '2026-01-01T00:00:00Z')]), /патчей/);
+});
+
+const event = (gid, name, body, extra = {}) => ({
+  gid,
+  event_name: name,
+  rtime32_start_time: ts('2026-10-01T09:00:00Z'),
+  announcement_body: { headline: name, body, posttime: ts('2026-10-01T09:00:30Z'), ...extra },
+});
+
+test('eventsToEntries подставляет русскую версию, только если она реально переведена', () => {
+  const en = [
+    event('10', 'HOI IV Dev Corner | Energy', 'Generals! Something different about energy and coal.'),
+    event('11', 'HOI IV | Patch 1.19.3', 'Generals! With the weather becoming more gloomy we bring a patch.'),
+  ];
+  const ru = [
+    event('10', 'Уголок разработчиков HOI IV | Энергия', 'Генералы! Нечто другое про энергию и уголь, всем привет.'),
+    event('11', 'HOI IV | Patch 1.19.5', 'Generals! With the weather becoming more gloomy we bring a patch.'),
+  ];
+  const [diary, patch] = eventsToEntries(en, ru);
+  assert.equal(diary.title, 'HOI IV Dev Corner | Energy');
+  assert.equal(diary.ru.title, 'Уголок разработчиков HOI IV | Энергия');
+  assert.equal(patch.ru, null);
+});
+
+test('eventsToEntries пропускает скрытые записи и записи без текста', () => {
+  const en = [event('1', 'A', ''), event('2', 'B', 'text', { hidden: 1 }), event('3', 'C', 'ok')];
+  assert.deepEqual(eventsToEntries(en).map((e) => e.gid), ['3']);
+});
+
+test('buildSections: русские дневники показываются на русском, классификация идёт по английскому заголовку', () => {
+  const en = [
+    event('4', 'HOI IV | Patch 1.19.3', 'Generals! A patch.'),
+    event('5', 'HOI IV Dev Corner | Energy', 'Generals! Energy and coal.'),
+  ];
+  const ru = [event('5', 'Уголок разработчиков HoI IV | Энергия', 'Это нечто другое, незапланированное для дополнения. Уголь не оправдал ожиданий.')];
+  const r = buildSections(eventsToEntries(en, ru), Date.parse('2026-10-06T00:00:00Z'));
+  const diaries = r.upcoming.blocks.find((b) => b.title.startsWith('Уголок разработчиков'));
+  assert.equal(diaries.items[0].title, 'Уголок разработчиков | Энергия');
+  assert.match(diaries.items[0].summary, /^Это нечто другое/);
+  assert.match(diaries.items[0].url, /view\/5\?l=russian$/);
+  assert.equal(r.current.blocks[0].items[0].title, 'Patch 1.19.3');
+});
+
+test('cyrillicShare игнорирует теги и ссылки', () => {
+  assert.equal(cyrillicShare('[url=https://example.com/абв]Hello[/url]'), 0);
+  assert.ok(cyrillicShare('Привет, мир') > 0.9);
 });

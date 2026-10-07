@@ -25,7 +25,7 @@
     devcomm: ['DEV Comm', 260],
     steam: ['Steam', 205],
     beta: ['Открытая бета', 45],
-    devdiary: ['Dev Corner', 100],
+    devdiary: ['Дневник', 100],
     dlc: ['Анонс', 340],
   };
 

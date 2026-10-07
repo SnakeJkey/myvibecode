@@ -84,3 +84,9 @@ test('глоссарий сохраняет названия игр и рубр�
   assert.equal(await tr.translate('Minecraft snapshot news'), 'Новости снимка Minecraft');
   assert.equal(await tr.translate('Weekly dev diary'), 'Dev Corner недели');
 });
+
+test('needsTranslation не трогает собственные названия', () => {
+  assert.equal(needsTranslation('Girls und Panzer'), false);
+  assert.equal(needsTranslation('Boosteroid'), false);
+  assert.equal(needsTranslation('Girls und Panzer returns this week'), true);
+});
