@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTranslator, needsTranslation, chunkText } = require('../lib/translate');
+const { createTranslator, needsTranslation, looksLikeName, chunkText } = require('../lib/translate');
 const { createStore } = require('../lib/store');
 
 const fake = (name, map, calls = []) => ({
@@ -89,4 +89,20 @@ test('needsTranslation не трогает собственные названи
   assert.equal(needsTranslation('Girls und Panzer'), false);
   assert.equal(needsTranslation('Boosteroid'), false);
   assert.equal(needsTranslation('Girls und Panzer returns this week'), true);
+});
+
+test('looksLikeName узнаёт названия техники и не трогает предложения', () => {
+  assert.equal(looksLikeName('Rheinmetall Skorpion G'), true);
+  assert.equal(looksLikeName('Kampfpanzer 07 RH'), true);
+  assert.equal(looksLikeName('Girls und Panzer'), true);
+  assert.equal(looksLikeName('The tank is ready.'), false);
+  assert.equal(looksLikeName('Join us for the event this weekend and win'), false);
+});
+
+test('translateBlocks с keepNames оставляет названия без перевода', async () => {
+  const calls = [];
+  const tr = createTranslator({ providers: [fake('a', {}, calls)] });
+  const [kept, translated] = await tr.translateBlocks(['Rheinmetall Skorpion G', 'The tank is ready for battle.'], { keepNames: true });
+  assert.equal(kept, 'Rheinmetall Skorpion G');
+  assert.match(translated, /^RU\(/);
 });
