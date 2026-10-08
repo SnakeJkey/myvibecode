@@ -1814,3 +1814,168 @@ h5.prose__h {
     gap: 12px;
   }
 }
+
+.ptime-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 0.88rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.ptime-chip[hidden] {
+  display: none;
+}
+
+.ptime-chip__live,
+.ptime__live {
+  color: var(--ok);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ptime-chip__live::before,
+.ptime__live::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.ptime {
+  margin-bottom: 18px;
+  padding: 18px 20px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.ptime__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ptime__title {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.ptime__total {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.ptime__note {
+  margin: 4px 0 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.ptime__chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  height: 108px;
+}
+
+.ptime__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+}
+
+.ptime__stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: 42px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.ptime__seg {
+  width: 100%;
+  min-height: 3px;
+}
+
+.ptime__dow {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+.ptime__games {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ptime__game {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.ptime__game:hover {
+  border-color: var(--accent);
+}
+
+.ptime__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.ptime__name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptime__time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .ptime__games {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

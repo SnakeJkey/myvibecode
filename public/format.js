@@ -133,5 +133,21 @@
     return out.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
   }
 
-  return { tagInfo, plural, splitDuration, humanDuration, dateRange, relative, fmtDate, freshItems, itemKey };
+  function formatPlaytime(ms) {
+    const value = Math.max(0, Number(ms) || 0);
+    const minutes = Math.floor(value / MINUTE);
+    if (value <= 0) return '0 мин';
+    if (minutes <= 0) return 'меньше минуты';
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    if (hours === 0) return `${rest} мин`;
+    const hoursLabel = `${hours} ${plural(hours, 'час', 'часа', 'часов')}`;
+    return rest === 0 ? hoursLabel : `${hoursLabel} ${rest} мин`;
+  }
+
+  function weekdayShort(value) {
+    return new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(new Date(value)).replace(/\.$/, '');
+  }
+
+  return { tagInfo, plural, splitDuration, humanDuration, dateRange, relative, fmtDate, freshItems, itemKey, formatPlaytime, weekdayShort };
 });

@@ -9,9 +9,9 @@ test('настройки по умолчанию и сохранение на д
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamehub-'));
   const file = path.join(dir, 'settings.json');
   const settings = createSettings({ file });
-  assert.deepEqual(settings.get(), { autoHide: true, displayMode: 'windowed' });
-  settings.set({ displayMode: 'fullscreen', autoHide: false });
-  assert.deepEqual(createSettings({ file }).get(), { autoHide: false, displayMode: 'fullscreen' });
+  assert.deepEqual(settings.get(), { autoHide: true, autoStart: false, displayMode: 'windowed' });
+  settings.set({ displayMode: 'fullscreen', autoHide: false, autoStart: true });
+  assert.deepEqual(createSettings({ file }).get(), { autoHide: false, autoStart: true, displayMode: 'fullscreen' });
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

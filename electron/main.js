@@ -8,11 +8,15 @@ const { createStore } = require('../lib/store');
 const { createTranslator } = require('../lib/translate');
 const { createSettings } = require('../lib/settings');
 const { createGameWatcher, gameForTarget } = require('../lib/gamewatch');
+const { createPlaytime } = require('../lib/playtime');
+const { loginItemOptions, shouldStartHidden } = require('../lib/autostart');
 
 let store;
 let launcher;
 let settings;
 let watcher;
+let playtime;
+let startHidden = false;
 let tray = null;
 let mainWindow = null;
 let quitting = false;
@@ -87,10 +91,15 @@ function createWindow() {
 
   if (saved.maximized) win.maximize();
   win.once('ready-to-show', () => {
+    if (startHidden && hideToBackground('GameHub запущен вместе с Windows и считает время в играх')) return;
     if (settings.get().displayMode === 'fullscreen') win.setFullScreen(true);
     win.show();
   });
-  win.on('close', () => {
+  win.on('close', (event) => {
+    if (!quitting && settings.get().autoStart && hideToBackground('GameHub работает в фоне и считает время в играх')) {
+      event.preventDefault();
+      return;
+    }
     closing.add(win);
     saveWindowState(win);
   });
@@ -123,7 +132,31 @@ function createWindow() {
 }
 
 function currentSettings(win) {
-  return { ...settings.get(), fullscreen: Boolean(win && !win.isDestroyed() && win.isFullScreen()) };
+  return {
+    ...settings.get(),
+    fullscreen: Boolean(win && !win.isDestroyed() && win.isFullScreen()),
+    autoStartSupported: process.platform === 'win32',
+  };
+}
+
+function wasOpenedAtLogin() {
+  try {
+    return app.getLoginItemSettings().wasOpenedAtLogin === true;
+  } catch {
+    return false;
+  }
+}
+
+function syncAutoStart(enabled) {
+  if (process.platform !== 'win32') return;
+  app.setLoginItemSettings(
+    loginItemOptions({
+      enabled,
+      packaged: app.isPackaged,
+      execPath: process.execPath,
+      appPath: process.argv[1],
+    })
+  );
 }
 
 function syncDisplayMode(win) {
@@ -147,35 +180,44 @@ function showMainWindow() {
   win.focus();
 }
 
-function hideForGame(gameName) {
+function hideToBackground(tooltip, { stopWatch = false } = {}) {
   const win = mainWindow;
-  if (!win || win.isDestroyed()) return;
+  if (!win || win.isDestroyed()) return false;
   try {
     destroyTray();
     const icon = nativeImage.createFromPath(path.join(__dirname, '..', 'build', 'icon.png')).resize({ width: 20, height: 20 });
+    if (icon.isEmpty()) throw new Error('нет значка');
     tray = new Tray(icon);
-    tray.setToolTip(`GameHub вернётся после выхода из игры: ${gameName}`);
+    tray.setToolTip(tooltip);
+    const reveal = () => {
+      if (stopWatch) watcher.stop();
+      showMainWindow();
+    };
     tray.setContextMenu(
       Menu.buildFromTemplate([
-        {
-          label: 'Показать GameHub',
-          click: () => {
-            watcher.stop();
-            showMainWindow();
-          },
-        },
+        { label: 'Показать GameHub', click: reveal },
         { label: 'Выйти', click: () => app.quit() },
       ])
     );
-    tray.on('click', () => {
-      watcher.stop();
-      showMainWindow();
-    });
+    tray.on('click', reveal);
     win.hide();
+    return true;
   } catch {
     destroyTray();
-    win.minimize();
+    return false;
   }
+}
+
+function hideForGame(gameName) {
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) return;
+  if (!hideToBackground(`GameHub вернётся после выхода из игры: ${gameName}`, { stopWatch: true })) win.minimize();
+}
+
+function publishPlaytime() {
+  const win = mainWindow;
+  if (!playtime || !win || win.isDestroyed()) return;
+  win.webContents.send('playtime:changed', playtime.summary());
 }
 
 function beginPlaySession(target) {
@@ -236,9 +278,17 @@ ipcMain.handle('games:launch', async (event, target) => {
 ipcMain.handle('settings:get', (event) => currentSettings(BrowserWindow.fromWebContents(event.sender)));
 ipcMain.handle('settings:set', (event, patch) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  const next = settings.set(patch);
+  const next = settings.set(patch && typeof patch === 'object' ? patch : {});
   if (win && patch && typeof patch === 'object' && 'displayMode' in patch) win.setFullScreen(next.displayMode === 'fullscreen');
+  if (patch && typeof patch === 'object' && 'autoStart' in patch) syncAutoStart(next.autoStart);
   return currentSettings(win);
+});
+
+ipcMain.handle('playtime:get', () => (playtime ? playtime.summary() : null));
+ipcMain.handle('playtime:reset', () => {
+  if (!playtime) return null;
+  playtime.reset();
+  return playtime.summary();
 });
 
 const hasLock = app.requestSingleInstanceLock();
@@ -255,7 +305,14 @@ if (!hasLock) {
     store = createStore(GAMES, { localize: translator.localize, translateBlocks: translator.translateBlocks });
     launcher = createLauncher({ shell, settings: launcherSettings });
     settings = createSettings({ file: path.join(app.getPath('userData'), 'settings.json') });
+    syncAutoStart(settings.get().autoStart);
+    startHidden = shouldStartHidden({ argv: process.argv, wasOpenedAtLogin: wasOpenedAtLogin(), autoStart: settings.get().autoStart });
     watcher = createGameWatcher({ onEnd: endPlaySession });
+    playtime = createPlaytime({
+      file: path.join(app.getPath('userData'), 'playtime.json'),
+      onChange: publishPlaytime,
+    });
+    playtime.start();
     Menu.setApplicationMenu(null);
     createWindow();
     app.on('activate', () => {
@@ -266,6 +323,7 @@ if (!hasLock) {
   app.on('before-quit', () => {
     quitting = true;
     watcher?.stop();
+    playtime?.stop();
     destroyTray();
   });
 

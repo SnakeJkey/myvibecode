@@ -22,6 +22,16 @@ test('relative показывает остаток или время до нач
   assert.equal(F.relative({ state: 'live', untilNextVersion: true }, now), 'до новой версии');
 });
 
+test('formatPlaytime складывает часы и минуты', () => {
+  assert.equal(F.formatPlaytime(0), '0 мин');
+  assert.equal(F.formatPlaytime(30 * 1000), 'меньше минуты');
+  assert.equal(F.formatPlaytime(5 * 60 * 1000), '5 мин');
+  assert.equal(F.formatPlaytime(2 * 3600 * 1000), '2 часа');
+  assert.equal(F.formatPlaytime((3 * 60 + 15) * 60 * 1000), '3 часа 15 мин');
+  assert.equal(F.formatPlaytime((1 * 60 + 1) * 60 * 1000), '1 час 1 мин');
+  assert.match(F.weekdayShort(new Date(2026, 9, 8).getTime()), /чт/i);
+});
+
 test('dateRange форматирует даты', () => {
   const now = Date.parse('2026-10-06T00:00:00Z');
   assert.equal(F.dateRange({ date: null }, now), 'Дата уточняется');

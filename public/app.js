@@ -40,6 +40,7 @@
     desktop: null,
     returnHash: '#/',
     signature: '',
+    playtime: null,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -52,6 +53,7 @@
     refresh: $('#refresh'),
     settings: $('#settings'),
     play: $('#play'),
+    playtime: $('#playtime-chip'),
     toast: $('#toast'),
   };
 
@@ -821,6 +823,82 @@
     }
   }
 
+  function gameAccent(game) {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return dark ? game.accentDark : game.accent;
+  }
+
+  function playtimePanel(summary) {
+    const max = Math.max(1, ...summary.days.map((day) => day.total));
+    const chart = h(
+      'div',
+      { class: 'ptime__chart', role: 'img', 'aria-label': `Время по дням: ${F.formatPlaytime(summary.total)}` },
+      summary.days.map((day) => {
+        const stack = h('div', { class: 'ptime__stack' });
+        state.games.forEach((game) => {
+          const ms = day.byGame[game.id] || 0;
+          if (!ms) return;
+          stack.append(h('div', { class: 'ptime__seg', style: `height:${(ms / max) * 100}%;background:${gameAccent(game)}`, title: `${game.name}: ${F.formatPlaytime(ms)}` }));
+        });
+        return h('div', { class: 'ptime__col', title: `${F.weekdayShort(day.start)}: ${F.formatPlaytime(day.total)}` }, stack, h('span', { class: 'ptime__dow' }, F.weekdayShort(day.start)));
+      })
+    );
+    const rows = state.games.map((game) => {
+      const stat = summary.games[game.id];
+      const playing = summary.playing.includes(game.id);
+      return h(
+        'button',
+        { class: 'ptime__game', type: 'button', onclick: () => navigate(game.id, 'current') },
+        gameIcon(game, 'ptime__icon'),
+        h('span', { class: 'ptime__name' }, game.short),
+        h('span', { class: 'ptime__time' }, F.formatPlaytime(stat?.total || 0)),
+        playing && h('span', { class: 'ptime__live' }, 'сейчас')
+      );
+    });
+    return h(
+      'section',
+      { class: 'ptime', 'aria-label': 'Время в играх за неделю' },
+      h('div', { class: 'ptime__head' }, h('h2', { class: 'ptime__title' }, 'За последние 7 дней'), h('span', { class: 'ptime__total' }, summary.total ? F.formatPlaytime(summary.total) : 'пока нет сессий')),
+      h('p', { class: 'ptime__note' }, 'Считается, пока GameHub открыт или свёрнут в трей, по тем же процессам, что и автоскрытие.'),
+      chart,
+      h('div', { class: 'ptime__games' }, rows)
+    );
+  }
+
+  function renderPlaytimeChip(game) {
+    if (!desktop?.playtime || !game || !state.playtime) {
+      els.playtime.hidden = true;
+      els.playtime.replaceChildren();
+      return;
+    }
+    const stat = state.playtime.games[game.id];
+    const playing = state.playtime.playing.includes(game.id);
+    els.playtime.hidden = false;
+    els.playtime.replaceChildren(h('span', {}, `За неделю: ${F.formatPlaytime(stat?.total || 0)}`), playing && h('span', { class: 'ptime-chip__live' }, 'сейчас'));
+  }
+
+  function paintPlaytime() {
+    if (!state.playtime || !desktop?.playtime) return;
+    if (state.view === 'home' && homeView) {
+      const next = playtimePanel(state.playtime);
+      if (homeView.ptime?.isConnected) homeView.ptime.replaceWith(next);
+      else homeView.grid.before(next);
+      homeView.ptime = next;
+    }
+    if (state.view === 'game') renderPlaytimeChip(currentGame());
+    else els.playtime.hidden = true;
+  }
+
+  async function refreshPlaytime() {
+    if (!desktop?.playtime) return;
+    try {
+      state.playtime = await desktop.playtime.get();
+    } catch (e) {
+      return;
+    }
+    paintPlaytime();
+  }
+
   function renderHome(force) {
     state.view = 'home';
     toolbar.hidden = true;
@@ -835,14 +913,15 @@
     );
     const grid = h('div', { class: 'home-grid' });
     const slots = new Map();
-    homeView = { grid, slots };
+    const ptime = state.playtime ? playtimePanel(state.playtime) : null;
+    homeView = { grid, slots, ptime };
     orderedGames().forEach((game) => {
       const cached = state.cache.get(game.id);
       const node = cached?.data && !force ? homeCard(game, cached) : homeCardSkeleton(game);
       slots.set(game.id, node);
       grid.append(node);
     });
-    els.content.replaceChildren(header, grid);
+    els.content.replaceChildren(header, ...(ptime ? [ptime] : []), grid);
 
     state.games.forEach((game) => {
       const cached = state.cache.get(game.id);
@@ -948,19 +1027,53 @@
     ];
 
     if (desktop?.settings && state.desktop) {
-      sections.push(
-        h(
-          'section',
-          { class: 'panel' },
-          h('h2', { class: 'panel__title' }, 'Запуск игр'),
+      const launchRows = [
+        switchRow(
+          'Скрывать GameHub во время игры',
+          'После нажатия «Играть» окно убирается, а когда вы выходите из игры, возвращается само. Если игра не запустится за 10 минут, окно вернётся автоматически. Вернуть его вручную можно через значок GameHub рядом с часами.',
+          state.desktop.autoHide,
+          (value) => setDesktopFlag({ autoHide: value })
+        ),
+      ];
+      if (state.desktop.autoStartSupported) {
+        launchRows.push(
           switchRow(
-            'Скрывать GameHub во время игры',
-            'После нажатия «Играть» окно убирается, а когда вы выходите из игры, возвращается само. Если игра не запустится за 10 минут, окно вернётся автоматически. Вернуть его вручную можно через значок GameHub рядом с часами.',
-            state.desktop.autoHide,
-            (value) => setDesktopFlag({ autoHide: value })
+            'Запускать вместе с Windows',
+            'GameHub стартует свёрнутым в трее и продолжает считать время в играх. Крестик тоже убирает окно в трей. Полностью выйти можно через меню значка рядом с часами.',
+            state.desktop.autoStart,
+            (value) => setDesktopFlag({ autoStart: value })
           )
-        )
-      );
+        );
+      }
+      if (desktop.playtime) {
+        launchRows.push(
+          h(
+            'div',
+            { class: 'setting' },
+            h(
+              'div',
+              { class: 'setting__text' },
+              h('div', { class: 'setting__title' }, 'Статистика времени'),
+              h('p', { class: 'setting__hint' }, 'Удаляет накопленные сеансы на этом компьютере. Текущая игра начнёт считаться заново.')
+            ),
+            h(
+              'button',
+              {
+                class: 'btn btn--ghost',
+                type: 'button',
+                onclick: async () => {
+                  if (!window.confirm('Сбросить статистику времени во всех играх?')) return;
+                  state.playtime = await desktop.playtime.reset();
+                  paintPlaytime();
+                  showToast('Статистика времени сброшена', 'ok');
+                },
+              },
+              'Сбросить'
+            )
+          )
+        );
+      }
+      sections.push(h('section', { class: 'panel' }, h('h2', { class: 'panel__title' }, 'Запуск и игры'), ...launchRows));
     }
 
     sections.push(
@@ -1069,6 +1182,7 @@
     toolbar.hidden = false;
     renderSectionTabs();
     renderPlay(game);
+    renderPlaytimeChip(game);
     document.title = `${game.name}: ${state.section === 'current' ? 'текущая версия' : 'предстоящее'} · GameHub`;
 
     const cached = state.cache.get(game.id);
@@ -1137,6 +1251,7 @@
       showToast(`С возвращением!${played}`, 'ok');
     }
     refreshAll();
+    refreshPlaytime();
   }
 
   async function init() {
@@ -1155,6 +1270,10 @@
       });
     }
     desktop?.onGameSession?.(onGameSession);
+    desktop?.playtime?.onChange((summary) => {
+      state.playtime = summary;
+      paintPlaytime();
+    });
     els.refresh.onclick = () => reload(true);
     modalEls.close.onclick = closeArticle;
     modalEls.root.addEventListener('mousedown', (e) => {
@@ -1180,7 +1299,11 @@
       render();
     });
     await render();
+    await refreshPlaytime();
     prefetchOthers();
+    setInterval(() => {
+      if (!document.hidden) refreshPlaytime();
+    }, 10000);
     state.timer = setInterval(tickCountdowns, 1000);
     setInterval(() => {
       if (document.hidden) return;

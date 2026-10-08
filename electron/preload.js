@@ -11,4 +11,9 @@ contextBridge.exposeInMainWorld('gameApi', {
     onChange: (callback) => ipcRenderer.on('settings:changed', (_event, value) => callback(value)),
   },
   onGameSession: (callback) => ipcRenderer.on('game:session', (_event, info) => callback(info)),
+  playtime: {
+    get: () => ipcRenderer.invoke('playtime:get'),
+    reset: () => ipcRenderer.invoke('playtime:reset'),
+    onChange: (callback) => ipcRenderer.on('playtime:changed', (_event, summary) => callback(summary)),
+  },
 });
