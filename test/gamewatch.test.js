@@ -38,6 +38,8 @@ test('matchesGame отличает игру от лаунчера', () => {
   assert.equal(matchesGame([{ name: 'java', detail: 'java -jar minecraft_server.jar nogui' }], 'minecraft'), false);
   assert.equal(matchesGame([{ name: 'Minecraft.Windows.exe' }], 'minecraft'), true);
   assert.equal(matchesGame([{ name: 'hoi4.exe' }], 'unknown'), false);
+  assert.equal(matchesGame(parsePs('/tmp/hoi4 600\n/usr/bin/sleep 5\n'), 'hoi4'), true);
+  assert.equal(matchesGame(parsePs('/usr/bin/sleep 5\n'), 'hoi4'), false);
 });
 
 test('listProcesses на Windows добирает командную строку Java', async () => {
