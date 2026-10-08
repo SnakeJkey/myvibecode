@@ -15,6 +15,7 @@
   --radius: 18px;
   --ok: #1f9d55;
   --warn: #c77700;
+  --new: #e0293e;
   color-scheme: light;
 }
 
@@ -33,6 +34,7 @@
   --accent-text: #10121c;
   --ok: #4cd288;
   --warn: #ffb547;
+  --new: #ff566a;
   color-scheme: dark;
 }
 
@@ -162,16 +164,17 @@ button {
   animation: spin 0.9s linear infinite;
 }
 
-#theme .icon-sun {
-  display: none;
+.icon-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow);
 }
 
-[data-theme='dark'] #theme .icon-sun {
-  display: block;
+#settings svg {
+  transition: transform 0.4s;
 }
 
-[data-theme='dark'] #theme .icon-moon {
-  display: none;
+#settings:hover svg {
+  transform: rotate(60deg);
 }
 
 .games {
@@ -1621,5 +1624,193 @@ h5.prose__h {
 @media (max-width: 900px) {
   .home-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.game-tab {
+  position: relative;
+}
+
+.game-tab--new,
+.game-tab--new[aria-selected='true'] {
+  border-color: var(--new);
+  box-shadow: 0 0 0 2px var(--new), 0 0 16px color-mix(in srgb, var(--new) 35%, transparent);
+}
+
+.game-tab__flag {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--new);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+
+.badge--new {
+  background: var(--new);
+  color: #fff;
+  border-color: transparent;
+}
+
+.home-card--new {
+  border-color: var(--new);
+  box-shadow: 0 0 0 2px var(--new), 0 0 26px color-mix(in srgb, var(--new) 28%, transparent), var(--shadow);
+}
+
+.home-new {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--new) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--new) 45%, transparent);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.home-new__label {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--new);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-new__text {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.panel {
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.panel__title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 0;
+}
+
+.setting + .setting {
+  border-top: 1px solid var(--border);
+}
+
+.setting__text {
+  min-width: 0;
+}
+
+.setting__title {
+  font-weight: 650;
+}
+
+.setting__hint {
+  margin: 2px 0 0;
+  max-width: 52ch;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.choice {
+  flex: none;
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.choice__item {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.choice__item[aria-checked='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.switch[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch[aria-checked='true'] .switch__knob {
+  transform: translateX(20px);
+  background: var(--accent-text);
+}
+
+.settings__back {
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .setting {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }

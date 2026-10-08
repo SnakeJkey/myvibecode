@@ -106,5 +106,32 @@
     return '';
   }
 
-  return { tagInfo, plural, splitDuration, humanDuration, dateRange, relative, fmtDate };
+  const FRESH_WINDOW = 3 * DAY;
+  const FRESH_TAGS = new Set(['update', 'patch', 'release', 'snapshot', 'bedrock', 'event', 'headhunting', 'weapon', 'battlepass', 'beta']);
+
+  const itemKey = (item) => `${item.tag || ''}|${item.title || ''}|${item.date || ''}`;
+
+  // Новое: обновление или событие, которое началось не более 3 суток назад.
+  function freshItems(data, now = Date.now()) {
+    if (!data) return [];
+    const seen = new Set();
+    const out = [];
+    const consider = (item, isHeadline) => {
+      if (!item || !item.date || (!isHeadline && !FRESH_TAGS.has(item.tag))) return;
+      const age = now - Date.parse(item.date);
+      if (!(age >= -HOUR && age <= FRESH_WINDOW)) return;
+      const key = itemKey(item);
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ key, title: item.title, tag: item.tag || 'update', date: item.date });
+    };
+    for (const section of [data.current, data.upcoming]) {
+      if (!section) continue;
+      if (section === data.current) consider(section.headline, true);
+      for (const block of section.blocks || []) for (const item of block.items || []) consider(item, false);
+    }
+    return out.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  }
+
+  return { tagInfo, plural, splitDuration, humanDuration, dateRange, relative, fmtDate, freshItems, itemKey };
 });

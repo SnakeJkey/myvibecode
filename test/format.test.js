@@ -34,3 +34,33 @@ test('tagInfo возвращает запасной вариант для неи
   assert.equal(F.tagInfo('patch').label, 'Патч');
   assert.equal(F.tagInfo('unknown').label, 'Новость');
 });
+
+test('freshItems находит обновления и события, начавшиеся не более 3 суток назад', () => {
+  const now = Date.parse('2026-10-08T09:00:00Z');
+  const data = {
+    current: {
+      headline: { title: 'Версия 1.2', date: '2026-10-07T01:00:00Z' },
+      blocks: [
+        {
+          items: [
+            { tag: 'event', title: 'Новое событие', date: '2026-10-06T10:00:00Z', state: 'live' },
+            { tag: 'event', title: 'Старое событие', date: '2026-10-01T10:00:00Z', state: 'live' },
+            { tag: 'merch', title: 'Мерч', date: '2026-10-07T10:00:00Z' },
+            { tag: 'update', title: 'Анонс в будущем', date: '2026-10-12T10:00:00Z', state: 'upcoming' },
+          ],
+        },
+      ],
+    },
+    upcoming: {
+      headline: { title: 'Дневник', date: '2026-10-07T10:00:00Z' },
+      blocks: [{ items: [{ tag: 'snapshot', title: 'Снапшот 3', date: '2026-10-07T12:00:00Z', state: 'upcoming' }] }],
+    },
+  };
+  const fresh = F.freshItems(data, now);
+  assert.deepEqual(
+    fresh.map((i) => i.title),
+    ['Снапшот 3', 'Версия 1.2', 'Новое событие']
+  );
+  assert.equal(F.freshItems(null, now).length, 0);
+  assert.equal(F.itemKey({ tag: 'event', title: 'A', date: 'D' }), 'event|A|D');
+});

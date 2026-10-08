@@ -2,12 +2,44 @@
   const F = window.GameFormat;
   const SECTIONS = ['current', 'upcoming'];
 
+  function loadJson(key, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(key)) ?? fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function loadFlag(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null ? fallback : value === '1';
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function save(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      /* хранилище может быть недоступно */
+    }
+  }
+
   const state = {
     games: [],
     cache: new Map(),
     gameId: null,
     section: 'current',
+    view: 'home',
     timer: null,
+    fresh: new Map(),
+    seen: loadJson('gamehub.seen', {}),
+    highlightNew: loadFlag('gamehub.highlightNew', true),
+    desktop: null,
+    returnHash: '#/',
+    signature: '',
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -18,7 +50,7 @@
     footer: $('#footer'),
     updated: $('#updated'),
     refresh: $('#refresh'),
-    theme: $('#theme'),
+    settings: $('#settings'),
     play: $('#play'),
     toast: $('#toast'),
   };
@@ -45,21 +77,36 @@
 
   const safeUrl = (url) => (typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null);
 
-  function setTheme(theme, persist) {
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function themeMode() {
+    let saved = null;
+    try {
+      saved = localStorage.getItem('theme');
+    } catch (e) {
+      /* хранилище может быть недоступно */
+    }
+    return saved === 'light' || saved === 'dark' ? saved : 'auto';
+  }
+
+  function applyTheme() {
+    const mode = themeMode();
+    const theme = mode === 'auto' ? (systemDark.matches ? 'dark' : 'light') : mode;
     document.documentElement.setAttribute('data-theme', theme);
-    els.theme.setAttribute('aria-pressed', String(theme === 'dark'));
-    if (persist) {
-      try {
-        localStorage.setItem('theme', theme);
-      } catch (e) {
-        /* хранилище может быть недоступно */
-      }
-    }
     applyAccent();
-    if (state.games.length) {
-      renderGameTabs();
-      if (!state.gameId) renderHome();
+    if (!state.games.length) return;
+    renderGameTabs();
+    if (state.view === 'home') renderHome();
+  }
+
+  function setThemeMode(mode) {
+    try {
+      if (mode === 'auto') localStorage.removeItem('theme');
+      else localStorage.setItem('theme', mode);
+    } catch (e) {
+      /* хранилище может быть недоступно */
     }
+    applyTheme();
   }
 
   function currentGame() {
@@ -76,22 +123,67 @@
     document.documentElement.style.setProperty('--accent', dark ? game.accentDark : game.accent);
   }
 
+  function unseenFor(id) {
+    const seen = new Set(state.seen[id] || []);
+    return (state.fresh.get(id) || []).filter((item) => !seen.has(item.key));
+  }
+
+  const isNew = (id) => state.highlightNew && unseenFor(id).length > 0;
+
+  function orderedGames() {
+    if (!state.highlightNew) return state.games;
+    const latest = (game) => Date.parse(unseenFor(game.id)[0]?.date || 0);
+    const flagged = state.games.filter((g) => isNew(g.id)).sort((a, b) => latest(b) - latest(a));
+    return [...flagged, ...state.games.filter((g) => !flagged.includes(g))];
+  }
+
+  function markSeen(id) {
+    const fresh = state.fresh.get(id);
+    if (!id || !fresh) return;
+    const keys = [...new Set([...(state.seen[id] || []), ...fresh.map((i) => i.key)])].slice(-60);
+    state.seen[id] = keys;
+    save('gamehub.seen', JSON.stringify(state.seen));
+  }
+
+  function orderSignature() {
+    return orderedGames()
+      .map((g) => `${g.id}${isNew(g.id) ? '!' : ''}`)
+      .join(',');
+  }
+
+  function onFreshChanged() {
+    const signature = orderSignature();
+    if (signature === state.signature) return;
+    state.signature = signature;
+    if (!state.games.length) return;
+    renderGameTabs();
+    if (state.view === 'home') reorderHome();
+  }
+
+  function trackFresh(id, payload) {
+    state.fresh.set(id, F.freshItems(payload.data));
+    onFreshChanged();
+  }
+
   function renderGameTabs() {
+    state.signature = orderSignature();
     els.games.replaceChildren(
-      ...state.games.map((game) =>
+      ...orderedGames().map((game) =>
         h(
           'button',
           {
-            class: 'game-tab',
+            class: `game-tab${isNew(game.id) ? ' game-tab--new' : ''}`,
             type: 'button',
             role: 'tab',
             id: `tab-${game.id}`,
             'aria-selected': String(game.id === state.gameId),
+            title: isNew(game.id) ? `Новое: ${unseenFor(game.id).map((i) => i.title).slice(0, 3).join('; ')}` : null,
             style: `--tab-accent:${document.documentElement.getAttribute('data-theme') === 'dark' ? game.accentDark : game.accent}`,
             onclick: () => navigate(game.id, 'current'),
           },
           h('span', { class: 'game-tab__badge', 'aria-hidden': 'true' }, gameIcon(game, 'game-tab__icon')),
-          h('span', {}, h('span', { class: 'game-tab__name' }, game.name), h('span', { class: 'game-tab__tagline' }, game.tagline))
+          h('span', {}, h('span', { class: 'game-tab__name' }, game.name), h('span', { class: 'game-tab__tagline' }, game.tagline)),
+          isNew(game.id) && h('span', { class: 'game-tab__flag' }, 'Новое')
         )
       )
     );
@@ -107,7 +199,9 @@
 
   function parseHash() {
     const [gameId, section] = location.hash.replace(/^#\/?/, '').split('/');
+    if (gameId === 'settings') return { view: 'settings', gameId: null, section: 'current' };
     return {
+      view: state.games.some((g) => g.id === gameId) ? 'game' : 'home',
       gameId: state.games.some((g) => g.id === gameId) ? gameId : null,
       section: SECTIONS.includes(section) ? section : 'current',
     };
@@ -138,6 +232,7 @@
     }
     if (!payload) throw new Error('Игра не найдена');
     state.cache.set(id, payload);
+    if (payload.data) trackFresh(id, payload);
     return payload;
   }
 
@@ -463,7 +558,8 @@
         { class: 'card__badges' },
         badge(tag.label, 'badge--tag'),
         item.state === 'live' && badge('Идёт сейчас', 'badge--live'),
-        item.state === 'upcoming' && badge('Скоро', 'badge--upcoming')
+        item.state === 'upcoming' && badge('Скоро', 'badge--upcoming'),
+        state.highlightNew && unseenFor(game.id).some((f) => f.key === F.itemKey(item)) && badge('Новое', 'badge--new')
       )
     );
 
@@ -619,7 +715,16 @@
       h('div', { class: 'home-card__titles' }, h('h2', { class: 'home-card__name' }, game.name), h('span', { class: 'home-card__tagline' }, game.tagline)),
       h('button', { class: 'home-card__open', type: 'button', onclick: () => navigate(game.id, 'current') }, 'Открыть ', h('span', { 'aria-hidden': 'true' }, '→'))
     );
-    const attrs = { class: 'home-card', 'data-game': game.id, style: `--accent:${dark ? game.accentDark : game.accent}` };
+    const fresh = isNew(game.id) ? unseenFor(game.id).slice(0, 2) : [];
+    const attrs = { class: `home-card${fresh.length ? ' home-card--new' : ''}`, 'data-game': game.id, style: `--accent:${dark ? game.accentDark : game.accent}` };
+    const flag = fresh.length
+      ? h(
+          'div',
+          { class: 'home-new', role: 'status' },
+          h('span', { class: 'home-new__label' }, 'Новое'),
+          h('span', { class: 'home-new__text' }, fresh.map((i) => i.title).join(' · '))
+        )
+      : null;
 
     if (!payload?.data) {
       return h(
@@ -693,11 +798,31 @@
         )
       : null;
 
-    return h('section', attrs, head, latest, list, next);
+    return h('section', attrs, head, flag, latest, list, next);
   }
 
   let homeToken = 0;
+  let homeView = null;
+
+  function reorderHome() {
+    if (!homeView) return;
+    for (const game of orderedGames()) {
+      let node = homeView.slots.get(game.id);
+      if (!node) continue;
+      const cached = state.cache.get(game.id);
+      const loaded = !node.classList.contains('home-card--loading');
+      if (loaded && cached?.data && node.classList.contains('home-card--new') !== isNew(game.id)) {
+        const next = homeCard(game, cached);
+        node.replaceWith(next);
+        homeView.slots.set(game.id, next);
+        node = next;
+      }
+      homeView.grid.append(node);
+    }
+  }
+
   function renderHome(force) {
+    state.view = 'home';
     toolbar.hidden = true;
     document.title = 'GameHub: главная';
     renderFooter(null);
@@ -710,7 +835,8 @@
     );
     const grid = h('div', { class: 'home-grid' });
     const slots = new Map();
-    state.games.forEach((game) => {
+    homeView = { grid, slots };
+    orderedGames().forEach((game) => {
       const cached = state.cache.get(game.id);
       const node = cached?.data && !force ? homeCard(game, cached) : homeCardSkeleton(game);
       slots.set(game.id, node);
@@ -731,6 +857,137 @@
           slots.set(game.id, next);
         });
     });
+  }
+
+  const THEME_CHOICES = [
+    ['light', 'Светлая'],
+    ['dark', 'Тёмная'],
+    ['auto', 'Как в системе'],
+  ];
+
+  function choiceGroup(label, options, value, onPick) {
+    return h(
+      'div',
+      { class: 'choice', role: 'radiogroup', 'aria-label': label },
+      options.map(([id, text, hint]) =>
+        h(
+          'button',
+          { class: 'choice__item', type: 'button', role: 'radio', 'aria-checked': String(id === value), title: hint, onclick: () => id !== value && onPick(id) },
+          text
+        )
+      )
+    );
+  }
+
+  function switchRow(title, hint, checked, onToggle) {
+    const toggle = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': String(checked), 'aria-label': title, onclick: () => onToggle(!checked) }, h('span', { class: 'switch__knob' }));
+    return h('div', { class: 'setting' }, h('div', { class: 'setting__text' }, h('div', { class: 'setting__title' }, title), h('p', { class: 'setting__hint' }, hint)), toggle);
+  }
+
+  function settingRow(title, hint, control) {
+    return h('div', { class: 'setting' }, h('div', { class: 'setting__text' }, h('div', { class: 'setting__title' }, title), h('p', { class: 'setting__hint' }, hint)), control);
+  }
+
+  const isFullscreen = () => (desktop ? Boolean(state.desktop?.fullscreen) : Boolean(document.fullscreenElement));
+
+  async function setDisplayMode(mode) {
+    if (desktop?.settings) {
+      state.desktop = await desktop.settings.set({ displayMode: mode });
+    } else if (mode === 'fullscreen') {
+      await document.documentElement.requestFullscreen?.().catch(() => showToast('Браузер не разрешил полноэкранный режим', 'error'));
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => {});
+    }
+    if (state.view === 'settings') renderSettings();
+  }
+
+  async function setDesktopFlag(patch) {
+    state.desktop = await desktop.settings.set(patch);
+    if (state.view === 'settings') renderSettings();
+  }
+
+  function renderSettings() {
+    state.view = 'settings';
+    homeToken += 1;
+    toolbar.hidden = true;
+    document.title = 'Настройки · GameHub';
+    renderFooter(null);
+
+    const sections = [
+      h(
+        'section',
+        { class: 'panel' },
+        h('h2', { class: 'panel__title' }, 'Оформление'),
+        settingRow(
+          'Режим фона',
+          'Светлая или тёмная тема. «Как в системе» следует настройке Windows, macOS или браузера.',
+          choiceGroup('Режим фона', THEME_CHOICES, themeMode(), (mode) => {
+            setThemeMode(mode);
+            renderSettings();
+          })
+        )
+      ),
+      h(
+        'section',
+        { class: 'panel' },
+        h('h2', { class: 'panel__title' }, 'Окно'),
+        settingRow(
+          'Режим отображения',
+          desktop ? 'Полноэкранный режим также включается клавишей F11.' : 'Полноэкранный режим браузера. Выйти из него можно клавишей Esc.',
+          choiceGroup(
+            'Режим отображения',
+            [
+              ['windowed', 'Оконный'],
+              ['fullscreen', 'Полноэкранный'],
+            ],
+            isFullscreen() ? 'fullscreen' : 'windowed',
+            setDisplayMode
+          )
+        )
+      ),
+    ];
+
+    if (desktop?.settings && state.desktop) {
+      sections.push(
+        h(
+          'section',
+          { class: 'panel' },
+          h('h2', { class: 'panel__title' }, 'Запуск игр'),
+          switchRow(
+            'Скрывать GameHub во время игры',
+            'После нажатия «Играть» окно убирается, а когда вы выходите из игры, возвращается само. Если игра не запустится за 10 минут, окно вернётся автоматически. Вернуть его вручную можно через значок GameHub рядом с часами.',
+            state.desktop.autoHide,
+            (value) => setDesktopFlag({ autoHide: value })
+          )
+        )
+      );
+    }
+
+    sections.push(
+      h(
+        'section',
+        { class: 'panel' },
+        h('h2', { class: 'panel__title' }, 'Новое'),
+        switchRow(
+          'Выделять игры с новыми событиями',
+          'Игры, в которых за последние 3 дня началось обновление или событие, выводятся первыми и обводятся красным. Пометка снимается, когда вы откроете игру.',
+          state.highlightNew,
+          (value) => {
+            state.highlightNew = value;
+            save('gamehub.highlightNew', value ? '1' : '0');
+            onFreshChanged();
+            renderGameTabs();
+            renderSettings();
+          }
+        )
+      )
+    );
+
+    els.content.replaceChildren(
+      h('div', { class: 'home-head' }, h('h1', { class: 'home-head__title' }, 'Настройки'), h('p', { class: 'home-head__sub' }, 'Внешний вид, режим окна и поведение GameHub при запуске игр.')),
+      h('div', { class: 'settings' }, sections),
+      h('div', { class: 'settings__back' }, h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => (location.hash = state.returnHash) }, '← Назад'))
+    );
   }
 
   function skeleton() {
@@ -792,11 +1049,19 @@
 
   async function render() {
     const parsed = parseHash();
+    if (state.gameId && state.gameId !== parsed.gameId) markSeen(state.gameId);
     state.gameId = parsed.gameId;
     state.section = parsed.section;
+    state.view = parsed.view;
+    els.settings.setAttribute('aria-pressed', String(parsed.view === 'settings'));
+    if (parsed.view !== 'settings') state.returnHash = location.hash || '#/';
     const game = currentGame();
     applyAccent();
     renderGameTabs();
+    if (parsed.view === 'settings') {
+      renderSettings();
+      return;
+    }
     if (!game) {
       renderHome();
       return;
@@ -860,9 +1125,36 @@
       .forEach((g, i) => setTimeout(() => fetchGame(g.id).catch(() => {}), 600 + i * 500));
   }
 
+  async function refreshAll() {
+    await Promise.allSettled(state.games.map((g) => fetchGame(g.id, { force: true })));
+    if (state.view !== 'settings') render();
+  }
+
+  function onGameSession(info) {
+    const game = state.games.find((g) => g.id === info.gameId);
+    if (info.reason === 'exited' && game) {
+      const played = info.durationMs >= 60000 ? ` Вы играли в ${game.name}: ${F.humanDuration(info.durationMs)}.` : '';
+      showToast(`С возвращением!${played}`, 'ok');
+    }
+    refreshAll();
+  }
+
   async function init() {
-    setTheme(document.documentElement.getAttribute('data-theme'), false);
-    els.theme.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true);
+    applyTheme();
+    systemDark.addEventListener?.('change', () => themeMode() === 'auto' && applyTheme());
+    els.settings.onclick = () => {
+      location.hash = state.view === 'settings' ? state.returnHash : '#/settings';
+    };
+    window.addEventListener('pagehide', () => markSeen(state.gameId));
+    document.addEventListener('fullscreenchange', () => state.view === 'settings' && !desktop && renderSettings());
+    if (desktop?.settings) {
+      state.desktop = await desktop.settings.get().catch(() => null);
+      desktop.settings.onChange((value) => {
+        state.desktop = value;
+        if (state.view === 'settings') renderSettings();
+      });
+    }
+    desktop?.onGameSession?.(onGameSession);
     els.refresh.onclick = () => reload(true);
     modalEls.close.onclick = closeArticle;
     modalEls.root.addEventListener('mousedown', (e) => {
@@ -891,8 +1183,12 @@
     prefetchOthers();
     state.timer = setInterval(tickCountdowns, 1000);
     setInterval(() => {
-      const game = currentGame();
-      if (game && !document.hidden) fetchGame(game.id).then((p) => p.data && draw(p, game)).catch(() => {});
+      if (document.hidden) return;
+      state.games.forEach((g) =>
+        fetchGame(g.id)
+          .then((p) => g.id === state.gameId && p.data && draw(p, g))
+          .catch(() => {})
+      );
     }, 10 * 60 * 1000);
   }
 
