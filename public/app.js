@@ -184,7 +184,7 @@
             onclick: () => navigate(game.id, 'current'),
           },
           h('span', { class: 'game-tab__badge', 'aria-hidden': 'true' }, gameIcon(game, 'game-tab__icon')),
-          h('span', {}, h('span', { class: 'game-tab__name' }, game.name), h('span', { class: 'game-tab__tagline' }, game.tagline)),
+          h('span', { class: 'game-tab__text' }, h('span', { class: 'game-tab__name' }, game.name), h('span', { class: 'game-tab__tagline' }, game.tagline)),
           isNew(game.id) && h('span', { class: 'game-tab__flag' }, 'Новое')
         )
       )
@@ -873,8 +873,10 @@
     }
     const stat = state.playtime.games[game.id];
     const playing = state.playtime.playing.includes(game.id);
+    const chip = [h('span', {}, `За неделю: ${F.formatPlaytime(stat?.total || 0)}`)];
+    if (playing) chip.push(h('span', { class: 'ptime-chip__live' }, 'сейчас'));
     els.playtime.hidden = false;
-    els.playtime.replaceChildren(h('span', {}, `За неделю: ${F.formatPlaytime(stat?.total || 0)}`), playing && h('span', { class: 'ptime-chip__live' }, 'сейчас'));
+    els.playtime.replaceChildren(...chip);
   }
 
   function paintPlaytime() {
@@ -907,9 +909,9 @@
     const token = ++homeToken;
     const header = h(
       'div',
-      { class: 'home-head' },
-      h('h1', { class: 'home-head__title' }, 'Главная'),
-      h('p', { class: 'home-head__sub' }, 'Что нового в ваших играх: свежие версии, последние изменения и ближайшие обновления.')
+      { class: 'home-head home-head--split' },
+      h('div', {}, h('h1', { class: 'home-head__title' }, 'Главная'), h('p', { class: 'home-head__sub' }, 'Что нового в ваших играх: свежие версии, последние изменения и ближайшие обновления.')),
+      h('p', { class: 'home-head__date' }, new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()))
     );
     const grid = h('div', { class: 'home-grid' });
     const slots = new Map();

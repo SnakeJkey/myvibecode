@@ -71,14 +71,14 @@ npm run dist:linux   # Linux: .AppImage
 
 | Игра | Что запускается |
 | --- | --- |
-| Arknights: Endfield | лаунчер GRYPHLINK (`Launcher.exe`) |
-| World of Tanks | сама игра `win64\WorldOfTanks.exe`, без Wargaming Game Center |
+| Arknights: Endfield | Steam (`steam://rungameid/4732690`) |
+| World of Tanks | лаунчер Wargaming Game Center (`wgc.exe`), не сам клиент игры |
 | Minecraft | меню на выбор: Minecraft Launcher, Modrinth App или CurseForge |
 | Hearts of Iron IV | Steam-версия (`steam://rungameid/394360`) |
 
 Программы ищутся автоматически: сначала путь, который вы указали вручную, затем запись об установке в реестре Windows и типичные папки на всех дисках. Если ничего не найдено, приложение предложит указать файл запуска, выбор запоминается (`launchers.json` в папке данных приложения). Если программе нужны права администратора, Windows покажет обычный запрос.
 
-Поиск программ и запуск полноценно рассчитаны на Windows. На macOS и Linux работают Steam, Minecraft Launcher, Modrinth App и CurseForge (если они найдены в стандартных местах), а Endfield и World of Tanks можно запустить, указав файл вручную.
+Поиск программ и запуск полноценно рассчитаны на Windows. На macOS и Linux работают Steam (Endfield и Hearts of Iron IV), Minecraft Launcher, Modrinth App и CurseForge (если они найдены в стандартных местах). Wargaming Game Center можно запустить на этих системах, указав файл вручную.
 
 ## Игра и сворачивание GameHub
 

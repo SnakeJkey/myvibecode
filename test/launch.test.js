@@ -66,32 +66,36 @@ test('Hearts of Iron IV запускается через Steam, без Steam д
   assert.match(result.error, /Steam не найден/);
 });
 
-test('World of Tanks: запускается 64-битный exe напрямую, путь берётся из реестра', async () => {
-  const exe = 'D:\\Games\\World_of_Tanks_EU\\win64\\WorldOfTanks.exe';
-  const { launcher, spawned } = setup({
-    files: [exe, 'D:\\Games\\World_of_Tanks_EU\\WorldOfTanks.exe'],
-    registry: {
-      'World of Tanks EU': 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\2314027414\r\n',
-      '2314027414': '    InstallLocation    REG_SZ    D:\\Games\\World_of_Tanks_EU\r\n',
-    },
-  });
+test('World of Tanks открывает Wargaming Game Center из стандартной папки', async () => {
+  const exe = 'C:\\ProgramData\\Wargaming.net\\GameCenter\\wgc.exe';
+  const { launcher, spawned } = setup({ files: [exe] });
   assert.deepEqual(await launcher.launch('wot'), { ok: true });
   assert.equal(spawned[0].file, exe);
-  assert.equal(spawned[0].cwd, 'D:\\Games\\World_of_Tanks_EU\\win64');
+  assert.equal(spawned[0].cwd, 'C:\\ProgramData\\Wargaming.net\\GameCenter');
 });
 
-test('World of Tanks: без реестра ищется в типичных папках на дисках', async () => {
-  const exe = 'D:\\Games\\World_of_Tanks_EU\\win64\\WorldOfTanks.exe';
-  const { launcher, spawned } = setup({ files: [exe] });
+test('World of Tanks: путь лаунчера берётся из реестра, если папка нестандартная', async () => {
+  const exe = 'D:\\Games\\Wargaming.net\\GameCenter\\wgc.exe';
+  const { launcher, spawned } = setup({
+    files: [exe],
+    registry: {
+      'Wargaming.net Game Center': 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WGC\r\n',
+      '\\WGC': '    InstallLocation    REG_SZ    D:\\Games\\Wargaming.net\\GameCenter\r\n',
+    },
+  });
   assert.equal((await launcher.launch('wot')).ok, true);
   assert.equal(spawned[0].file, exe);
 });
 
-test('Endfield: находит Launcher.exe в GRYPHLINK', async () => {
-  const exe = 'C:\\Program Files\\GRYPHLINK\\Launcher.exe';
-  const { launcher, spawned } = setup({ files: [exe] });
-  assert.equal((await launcher.launch('endfield')).ok, true);
-  assert.equal(spawned[0].file, exe);
+test('Endfield запускается через Steam', async () => {
+  const ok = setup({ registry: { 'Valve\\Steam': '    SteamExe    REG_SZ    c:/steam/steam.exe' } });
+  assert.deepEqual(await ok.launcher.launch('endfield'), { ok: true });
+  assert.deepEqual(ok.opened, [['url', 'steam://rungameid/4732690']]);
+
+  const none = setup();
+  const result = await none.launcher.launch('endfield');
+  assert.equal(result.ok, false);
+  assert.match(result.error, /Steam не найден/);
 });
 
 test('Minecraft: три варианта, включая Microsoft Store и Modrinth/CurseForge', async () => {
@@ -111,33 +115,36 @@ test('Minecraft: три варианта, включая Microsoft Store и Modr
 });
 
 test('если программа не найдена, возвращается not-found, а выбранный вручную путь запоминается', async () => {
-  const { launcher, spawned, saved } = setup({ files: ['E:\\Custom\\Launcher.exe'] });
-  const missing = await launcher.launch('endfield');
+  const { launcher, spawned, saved } = setup({ files: ['E:\\Custom\\wgc.exe'] });
+  const missing = await launcher.launch('wot');
   assert.equal(missing.ok, false);
   assert.equal(missing.code, 'not-found');
 
-  assert.equal((await launcher.launchFile('endfield', 'E:\\Nope.exe')).ok, false);
-  assert.equal((await launcher.launchFile('endfield', 'E:\\Custom\\Launcher.exe')).ok, true);
-  assert.equal(saved.endfield, 'E:\\Custom\\Launcher.exe');
-  assert.equal(spawned[0].file, 'E:\\Custom\\Launcher.exe');
+  assert.equal((await launcher.launchFile('wot', 'E:\\Nope.exe')).ok, false);
+  assert.equal((await launcher.launchFile('wot', 'E:\\Custom\\wgc.exe')).ok, true);
+  assert.equal(saved.wot, 'E:\\Custom\\wgc.exe');
+  assert.equal(spawned[0].file, 'E:\\Custom\\wgc.exe');
 
-  assert.equal((await launcher.launch('endfield')).ok, true);
-  assert.equal(spawned[1].file, 'E:\\Custom\\Launcher.exe');
+  assert.equal((await launcher.launch('wot')).ok, true);
+  assert.equal(spawned[1].file, 'E:\\Custom\\wgc.exe');
   assert.equal((await launcher.launch('nonsense')).ok, false);
-  assert.equal((await launcher.launchFile('hoi4', 'E:\\Custom\\Launcher.exe')).ok, false);
+  assert.equal((await launcher.launchFile('hoi4', 'E:\\Custom\\wgc.exe')).ok, false);
+  assert.equal((await launcher.launchFile('endfield', 'E:\\Custom\\wgc.exe')).ok, false);
 });
 
 test('если прямой запуск не удался (нужны права администратора), используется ShellExecute', async () => {
-  const exe = 'C:\\Program Files\\GRYPHLINK\\Launcher.exe';
+  const exe = 'C:\\ProgramData\\Wargaming.net\\GameCenter\\wgc.exe';
   const { launcher, opened } = setup({ files: [exe], failFirst: true });
-  assert.equal((await launcher.launch('endfield')).ok, true);
+  assert.equal((await launcher.launch('wot')).ok, true);
   assert.deepEqual(opened, [['path', exe]]);
 });
 
-test('Linux: Minecraft Launcher ищется в PATH, WoT и Endfield недоступны', async () => {
-  const { launcher, spawned } = setup({ platform: 'linux', files: ['/usr/bin/minecraft-launcher'], pathEnv: '/usr/local/bin:/usr/bin' });
+test('Linux: Minecraft Launcher ищется в PATH, Endfield идёт через Steam, WoT недоступен', async () => {
+  const { launcher, spawned, opened } = setup({ platform: 'linux', files: ['/usr/bin/minecraft-launcher'], pathEnv: '/usr/local/bin:/usr/bin' });
   assert.equal((await launcher.launch('minecraft-official')).ok, true);
   assert.equal(spawned[0].file, '/usr/bin/minecraft-launcher');
+  assert.equal((await launcher.launch('endfield')).ok, true);
+  assert.deepEqual(opened, [['url', 'steam://rungameid/4732690']]);
   const wot = await launcher.launch('wot');
   assert.equal(wot.ok, false);
   assert.equal(wot.code, 'not-found');
