@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b2670"/>
+      <stop offset="0.55" stop-color="#15163f"/>
+      <stop offset="1" stop-color="#0a0b22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.18" r="0.8">
+      <stop offset="0" stop-color="#7c6cff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#7c6cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.85" cy="0.95" r="0.7">
+      <stop offset="0" stop-color="#19d3ee" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#19d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#b9b4ff"/>
+    </linearGradient>
+    <linearGradient id="btnA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4be3ff"/>
+      <stop offset="1" stop-color="#2a8cff"/>
+    </linearGradient>
+    <linearGradient id="btnB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7ad1"/>
+      <stop offset="1" stop-color="#9b5cff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#05061a" flood-opacity="0.55"/>
+    </filter>
+    <clipPath id="clip"><rect width="1024" height="1024" rx="232"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1024" height="1024" fill="url(#plate)"/>
+    <rect width="1024" height="1024" fill="url(#glow)"/>
+    <rect width="1024" height="1024" fill="url(#glow2)"/>
+    <rect x="3" y="3" width="1018" height="1018" rx="229" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="6"/>
+  </g>
+<g transform="translate(512 512) scale(1.12) translate(-512 -517)">
+  <g filter="url(#shadow)">
+    <path fill="url(#pad)" d="M338 316H686C778 316 838 372 860 472L884 596C898 666 862 718 806 718C766 718 740 698 718 664L686 612H338L306 664C284 698 258 718 218 718C162 718 126 666 140 596L164 472C186 372 246 316 338 316Z"/>
+  </g>
+  <g fill="#15163f">
+    <rect x="266" y="450" width="128" height="46" rx="12"/>
+    <rect x="307" y="409" width="46" height="128" rx="12"/>
+    <circle cx="640" cy="560" r="0"/>
+  </g>
+  <circle cx="758" cy="430" r="31" fill="url(#btnA)"/>
+  <circle cx="700" cy="488" r="31" fill="url(#btnB)"/>
+  <circle cx="816" cy="488" r="31" fill="#15163f"/>
+  <circle cx="758" cy="546" r="31" fill="#15163f"/>
+  <rect x="452" y="452" width="46" height="16" rx="8" fill="#15163f" opacity="0.55"/>
+  <rect x="526" y="452" width="46" height="16" rx="8" fill="#15163f" opacity="0.55"/>
+</g>
+</svg>

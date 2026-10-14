@@ -1,0 +1,70 @@
+{
+  "name": "game-tracker",
+  "version": "1.0.0",
+  "description": "GameHub: настольное приложение с текущими и предстоящими событиями в избранных играх",
+  "private": true,
+  "type": "commonjs",
+  "main": "electron/main.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "electron .",
+    "web": "node server.js",
+    "test": "node --test \"test/*.test.js\"",
+    "dist": "npx --yes electron-builder@26",
+    "dist:win": "npx --yes electron-builder@26 --win",
+    "dist:mac": "npx --yes electron-builder@26 --mac",
+    "dist:linux": "npx --yes electron-builder@26 --linux"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1"
+  },
+  "author": "Nikita",
+  "build": {
+    "appId": "local.gamehub.app",
+    "productName": "GameHub",
+    "files": [
+      "electron/**",
+      "lib/**",
+      "public/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "GameHub-Setup.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.png",
+      "artifactName": "GameHub.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "artifactName": "GameHub.${ext}"
+    },
+    "portable": {
+      "artifactName": "GameHub-portable.exe"
+    }
+  },
+  "productName": "GameHub"
+}

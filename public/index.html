@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GameHub: события и обновления в играх</title>
+    <meta name="description" content="Текущие и предстоящие события, версии и обновления в Arknights: Endfield, World of Tanks, Minecraft и Hearts of Iron IV." />
+    <meta name="color-scheme" content="light dark" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'" />
+    <link rel="icon" type="image/png" href="icons/gamehub.png" />
+    <script>
+      (function () {
+        var saved = null;
+        try { saved = localStorage.getItem('theme'); } catch (e) {}
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="#/" aria-label="GameHub: на главную" title="На главную">
+          <img class="brand__mark" src="icons/gamehub.png" alt="" width="36" height="36" draggable="false" />
+          <span class="brand__text">GameHub</span>
+        </a>
+        <div class="topbar__actions">
+          <span class="updated" id="updated" aria-live="polite"></span>
+          <button class="icon-btn" id="refresh" type="button" title="Обновить данные" aria-label="Обновить данные">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          </button>
+          <button class="icon-btn" id="settings" type="button" title="Настройки" aria-label="Настройки" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+      <nav class="games" id="games" role="tablist" aria-label="Игры"></nav>
+    </header>
+
+    <main class="page">
+      <div class="toolbar">
+        <div class="segmented" id="sections" role="tablist" aria-label="Раздел">
+          <button type="button" role="tab" data-section="current">
+            <span class="segmented__dot segmented__dot--live"></span>Текущая версия
+          </button>
+          <button type="button" role="tab" data-section="upcoming">
+            <span class="segmented__dot"></span>Предстоящая
+          </button>
+          <span class="segmented__thumb" aria-hidden="true"></span>
+        </div>
+        <div class="ptime-chip" id="playtime-chip" hidden></div>
+        <div class="play" id="play" hidden></div>
+      </div>
+
+      <div id="content" aria-live="polite"></div>
+    </main>
+
+    <footer class="footer" id="footer"></footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <div class="modal" id="modal" hidden>
+      <div class="modal__backdrop"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal__close icon-btn" id="modal-close" type="button" aria-label="Закрыть" title="Закрыть (Esc)">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="modal__scroll"></div>
+      </div>
+    </div>
+    <script src="format.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
